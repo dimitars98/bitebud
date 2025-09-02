@@ -1,4 +1,3 @@
-import React from "react";
 import { useParams } from "react-router-dom";
 
 export default function Restaurant() {
@@ -10,7 +9,6 @@ export default function Restaurant() {
       <p className="text-gray-600">
         You are viewing restaurant with ID: <strong>{id}</strong>
       </p>
-      {/* TODO: Fetch restaurant info & menu based on ID */}
     </div>
   );
 }

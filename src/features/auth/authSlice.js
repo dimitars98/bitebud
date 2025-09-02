@@ -2,7 +2,7 @@ import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
   user: null,
-  loading: true, // helpful for showing a loading state until Firebase resolves
+  loading: true,
 };
 
 const authSlice = createSlice({
@@ -29,6 +29,6 @@ const authSlice = createSlice({
   },
 });
 
-export const { setUser, logout } = authSlice.actions;
+export const { setUser, logout, setLoading } = authSlice.actions;
 
 export default authSlice.reducer;

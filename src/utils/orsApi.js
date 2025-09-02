@@ -1,4 +1,3 @@
-// Your ORS API key
 const ORS_API_KEY = "5b3ce3597851110001cf6248859e098a470845e896bdd3a012310109";
 
 // Calculate distances from user location to restaurant locations

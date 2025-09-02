@@ -1,17 +1,31 @@
-// src/pages/Checkout.jsx
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useCart } from "../contexts/CartContext";
-import { useAuth } from "../contexts/AuthContext";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useAuth } from "../hooks/useAuth";
 
 import {
   getFirestore,
   collection,
   addDoc,
   serverTimestamp,
+  doc,
+  runTransaction,
+  query,
+  getDocs,
+  getDoc,
 } from "firebase/firestore";
+import { geocodeAddress } from "../utils/geocode";
+import { collection as firestoreCollection } from "firebase/firestore";
 
 export default function Checkout() {
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [loadingAddresses, setLoadingAddresses] = useState(true);
+  const [restaurantLocation, setRestaurantLocation] = useState(null);
+
+  const location = useLocation();
+  const restaurantId = location.state?.restaurantId;
+
   const { cartItems, clearCart } = useCart();
   const db = getFirestore();
 
@@ -24,10 +38,55 @@ export default function Checkout() {
 
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+  useEffect(() => {
+    async function fetchAddresses() {
+      if (!user) return;
+
+      setLoadingAddresses(true);
+
+      const addressesRef = collection(db, "users", user.uid, "addresses");
+      const q = query(addressesRef);
+      const snapshot = await getDocs(q);
+
+      const fetchedAddresses = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      setAddresses(fetchedAddresses);
+
+      const defaultAddress = fetchedAddresses.find((addr) => addr.default);
+      if (defaultAddress) {
+        setSelectedAddressId(defaultAddress.id);
+      } else if (fetchedAddresses.length > 0) {
+        setSelectedAddressId(fetchedAddresses[0].id);
+      }
+
+      setLoadingAddresses(false);
+    }
+
+    fetchAddresses();
+  }, [user, db]);
+
+  useEffect(() => {
+    if (!user || !restaurantId) return;
+
+    async function fetchRestaurantLocation() {
+      const restaurantDoc = await getDoc(doc(db, "restaurants", restaurantId));
+      if (restaurantDoc.exists()) {
+        setRestaurantLocation(restaurantDoc.data().location);
+      } else {
+        console.error("Restaurant not found");
+      }
+    }
+
+    fetchRestaurantLocation();
+  }, [user, restaurantId, db]);
 
   useEffect(() => {
     if (!loading && !user) {
-      // User is logged out, redirect to home page
       navigate("/");
     }
   }, [user, loading, navigate]);
@@ -36,8 +95,46 @@ export default function Checkout() {
     if (!user) return;
 
     try {
+      const addressSnapshot = await getDocs(
+        firestoreCollection(db, "users", user.uid, "addresses")
+      );
+      const addresses = addressSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      const selectedAddress = addresses.find(
+        (addr) => addr.id === selectedAddressId
+      );
+      if (!selectedAddress) {
+        alert("Please select a delivery address.");
+        return;
+      }
+
+      const fullAddress = `${selectedAddress.street}, Skopje`;
+      const location = await geocodeAddress(fullAddress, apiKey);
+
+      if (!location) {
+        alert("Failed to determine location from address.");
+        return;
+      }
+
+      const orderNumber = await runTransaction(db, async (transaction) => {
+        const counterRef = doc(db, "meta", "counters");
+        const counterDoc = await transaction.get(counterRef);
+
+        if (!counterDoc.exists()) {
+          throw "Counter document does not exist!";
+        }
+
+        const newOrderNumber = counterDoc.data().lastOrderNumber + 1;
+        transaction.update(counterRef, { lastOrderNumber: newOrderNumber });
+        return newOrderNumber;
+      });
+
       const docRef = await addDoc(collection(db, "orders"), {
         userId: user.uid,
+        orderNumber,
         items: cartItems.map(({ id, name, price, quantity }) => ({
           id,
           name,
@@ -49,9 +146,16 @@ export default function Checkout() {
         total,
         status: 0,
         createdAt: serverTimestamp(),
+        deliveryAddress: selectedAddress,
+        deliveryLocation: location,
+        restaurantLocation: restaurantLocation || {
+          lat: 41.9981,
+          lng: 21.4254,
+        }, // fallback coords
+        courierLocation: null,
       });
 
-      localStorage.setItem("ongoingOrderId", docRef.id);
+      // localStorage.setItem("ongoingOrderId", docRef.id);
       clearCart();
       navigate("/order-confirmation", { state: { orderId: docRef.id } });
     } catch (error) {
@@ -131,6 +235,50 @@ export default function Checkout() {
               </div>
             </div>
           </section>
+
+          {loadingAddresses ? (
+            <p>Loading addresses...</p>
+          ) : addresses.length === 0 ? (
+            <p>
+              You have no saved delivery addresses. Please add one in your
+              profile.
+            </p>
+          ) : (
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold mb-3">
+                Select Delivery Address
+              </h2>
+              <div className="space-y-3 max-h-48 overflow-y-auto">
+                {addresses.map((address) => (
+                  <label
+                    key={address.id}
+                    className={`block p-3 border rounded-lg cursor-pointer transition 
+            ${
+              selectedAddressId === address.id
+                ? "border-yellow-400 bg-yellow-50 dark:bg-yellow-900"
+                : "border-gray-300 dark:border-gray-700"
+            }
+          `}
+                  >
+                    <input
+                      type="radio"
+                      name="deliveryAddress"
+                      value={address.id}
+                      checked={selectedAddressId === address.id}
+                      onChange={() => setSelectedAddressId(address.id)}
+                      className="mr-3"
+                    />
+                    <span>
+                      {address.street},
+                      {address.entranceInfo && `${address.entranceInfo}, `}
+                      {address.floor && `Floor: ${address.floor}, `}
+                      Phone: {address.phone} {address.default && "(Default)"}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Action Button */}
           <button

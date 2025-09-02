@@ -7,37 +7,70 @@ import {
   linkWithCredential,
   fetchSignInMethodsForEmail,
 } from "firebase/auth";
-import { auth } from "../../firebase";
+import { auth } from "../firebase/firebase";
+import { useForm } from "react-hook-form";
 
 export default function Login({ onSuccess }) {
   const [step, setStep] = useState("email"); // "email" | "password"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  // const [error, setError] = useState("");
 
-  const handleEmailSubmit = (e) => {
-    e.preventDefault();
-    if (!email) {
-      setError("Please enter your email.");
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm();
+
+  // const handleEmailSubmit = (e) => {
+  //   e.preventDefault();
+  //   if (!email) {
+  //     setError("Please enter your email.");
+  //     return;
+  //   }
+  //   setError("");
+  //   setStep("password");
+  // };
+
+  // const handlePasswordSubmit = async (e) => {
+  //   e.preventDefault();
+  //   setIsLoading(true);
+  //   setError("");
+
+  //   try {
+  //     await signInWithEmailAndPassword(auth, email, password);
+  //     if (onSuccess) onSuccess();
+  //   } catch (err) {
+  //     setError(err.message || "Failed to log in.");
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+
+  const onSubmit = async (data) => {
+    const { email: submittedEmail, password: submittedPassword } = data;
+
+    if (step === "email") {
+      setEmail(submittedEmail);
+      setStep("password");
       return;
     }
-    setError("");
-    setStep("password");
-  };
 
-  const handlePasswordSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError("");
-
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      if (onSuccess) onSuccess();
-    } catch (err) {
-      setError(err.message || "Failed to log in.");
-    } finally {
-      setIsLoading(false);
+    if (step === "password") {
+      setIsLoading(true);
+      try {
+        await signInWithEmailAndPassword(auth, email, submittedPassword);
+        if (onSuccess) onSuccess();
+      } catch (err) {
+        setError("password", {
+          type: "manual",
+          message: err.message || "Failed to log in.",
+        });
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -140,15 +173,19 @@ export default function Login({ onSuccess }) {
       {/* Email or Password Step */}
       {step === "email" ? (
         <div className="login-modal">
-          <form onSubmit={handleEmailSubmit} className="flex flex-col gap-4">
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="flex flex-col gap-4"
+          >
             <input
               type="email"
               placeholder="Enter your email"
               className="border border-gray-400 placeholder:text-gray-400 caret-gray-400 rounded-lg p-4 w-full"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
+              {...register("email", { required: "Email is required" })}
             />
+            {errors.email && (
+              <p className="text-red-500 text-xs">{errors.email.message}</p>
+            )}
             <button
               type="submit"
               className="bg-yellow-500 text-white py-4 rounded-lg hover:bg-yellow-600 cursor-pointer"
@@ -158,7 +195,7 @@ export default function Login({ onSuccess }) {
           </form>
         </div>
       ) : (
-        <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <p className="text-sm text-gray-100">
             Logging in as <strong>{email}</strong>
           </p>
@@ -167,11 +204,11 @@ export default function Login({ onSuccess }) {
             type="password"
             placeholder="Enter your password"
             className="border p-2 rounded w-full dark:placeholder:text-gray-400"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
+            {...register("password", { required: "Password is required" })}
           />
-
+          {errors.password && (
+            <p className="text-red-500 text-xs">{errors.password.message}</p>
+          )}
           <button
             type="submit"
             className="bg-yellow-500 text-white py-2 rounded hover:bg-yellow-600"
@@ -190,12 +227,11 @@ export default function Login({ onSuccess }) {
         </form>
       )}
 
-      {/* Error Message */}
-      {error && (
+      {/* {error && (
         <div className="mt-2 text-sm text-red-600 bg-red-100 px-4 py-2 rounded">
           {error}
         </div>
-      )}
+      )} */}
     </div>
   );
 }

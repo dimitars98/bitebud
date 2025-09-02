@@ -14,7 +14,7 @@ function Footer() {
         {/* App Branding & Badges */}
         <div className="flex flex-col justify-between gap-4 sm:gap-6">
           <Link to="/" className="text-2xl font-bold text-yellow-500">
-            SkopjeEats
+            Bite<span className="text-gray-800 dark:text-white">Bud</span>{" "}
           </Link>
           <div className="flex lg:flex-col gap-4">
             <a href="#" target="_blank" rel="noopener noreferrer">

@@ -1,11 +1,10 @@
-import React from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import RestaurantCard from "../components/RestaurantCard";
 
-export default function RestaurantSlider({ restaurants, title }) {
+export default function RestaurantSlider({ restaurants, title, onSeeAll }) {
   if (!restaurants || restaurants.length === 0) return null;
 
   return (
@@ -14,15 +13,14 @@ export default function RestaurantSlider({ restaurants, title }) {
         <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-50">
           {title}
         </h2>
-        <button
-          className="text-sm font-medium text-yellow-500 hover:underline hover:text-yellow-600 transition"
-          onClick={() => {
-            // Optional: use navigation or state to handle full list view
-            console.log("Navigate to all restaurants for:", title);
-          }}
-        >
-          See all
-        </button>
+        {onSeeAll && (
+          <button
+            onClick={onSeeAll}
+            className="text-sm font-medium focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-amber-400 text-yellow-500 hover:underline hover:text-yellow-600 transition"
+          >
+            See all
+          </button>
+        )}
       </div>
 
       <Swiper
@@ -33,6 +31,7 @@ export default function RestaurantSlider({ restaurants, title }) {
         navigation
         loop={false}
         watchOverflow={true}
+        speed={600}
         className="pb-4"
       >
         {restaurants.map((rest) => (

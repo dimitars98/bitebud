@@ -1,4 +1,3 @@
-// src/pages/OrderConfirmation.jsx
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -12,7 +11,7 @@ export default function OrderConfirmation() {
       if (orderId) {
         navigate(`/order-tracking/${orderId}`);
       } else {
-        navigate("/"); // fallback
+        navigate("/");
       }
     }, 3000);
 

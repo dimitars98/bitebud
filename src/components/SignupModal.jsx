@@ -1,8 +1,8 @@
 import { useState } from "react";
-import Modal from "@mui/material/Modal"; // or any modal lib you prefer
+import Modal from "@mui/material/Modal";
 import Box from "@mui/material/Box";
 import { collection, addDoc } from "firebase/firestore";
-import { db } from "../../firebase"; // adjust path to your Firebase config
+import { db } from "../../firebase";
 
 const modalStyle = {
   position: "absolute",

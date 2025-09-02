@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { auth, db } from "../../firebase"; // Adjust path as needed
+import { auth, db } from "../firebase/firebase"; 
 import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
@@ -10,18 +10,18 @@ import {
   fetchSignInMethodsForEmail,
 } from "firebase/auth";
 
-import { handleAccountLinking } from "../features/auth/handleAccountLinking";
 
 import { doc, setDoc } from "firebase/firestore";
 import { FcGoogle } from "react-icons/fc";
 import { FaFacebook } from "react-icons/fa";
 
 import { toast } from "react-hot-toast";
-
 import { useMutation } from "@tanstack/react-query";
+import { handleAccountLinking } from "../features/auth/handleAccountLinking";
+
 
 export default function SignUp({ onSuccess }) {
-  const [step, setStep] = useState("options"); // "options" | "form"
+  const [step, setStep] = useState("options"); 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
@@ -68,7 +68,6 @@ export default function SignUp({ onSuccess }) {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      // Save user info in Firestore
       const userRef = doc(db, "users", user.uid);
       await setDoc(
         userRef,
@@ -113,7 +112,7 @@ export default function SignUp({ onSuccess }) {
         { merge: true }
       );
 
-      onSuccess(); // Close modal or notify parent
+      onSuccess(); 
     } catch (err) {
       if (err.code === "auth/account-exists-with-different-credential") {
         await handleAccountLinking({
@@ -148,7 +147,7 @@ export default function SignUp({ onSuccess }) {
 
   const handleFormSubmit = (e) => {
     e.preventDefault();
-    setError(""); // clear previous error
+    setError(""); 
     signupMutation.mutate();
   };
 

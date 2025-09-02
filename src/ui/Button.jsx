@@ -1,5 +1,4 @@
-import React from "react";
-import classNames from "classnames"; // optional, helps with conditional styles
+import classNames from "classnames";
 
 export default function Button({
   children,

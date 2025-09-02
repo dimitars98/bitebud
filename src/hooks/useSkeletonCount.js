@@ -12,11 +12,11 @@ export default function useSkeletonCount() {
       else if (width >= 1024) columns = 3; // md
       else if (width >= 640) columns = 2; // sm
 
-      const rows = 3; // preload 3 rows
+      const rows = 3;
       setCount(columns * rows);
     }
 
-    updateCount(); // Run once on mount
+    updateCount();
     window.addEventListener("resize", updateCount);
 
     return () => window.removeEventListener("resize", updateCount);

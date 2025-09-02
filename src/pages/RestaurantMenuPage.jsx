@@ -1,28 +1,20 @@
 import { useNavigate, useParams } from "react-router-dom";
 import MenuCard from "../ui/MenuCard";
-import { useRestaurants } from "../contexts/RestaurantContext";
 import { useCartOpen } from "../contexts/CartOpenContext";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import LoadingSpinner from "../ui/LoadingSpinner";
 import SkeletonImage from "../ui/SkeletonImage";
+import { useRestaurantsQuery } from "../hooks/useRestaurantsQuery";
+import toast from "react-hot-toast";
 
 export default function RestaurantMenuPage() {
-  const { id } = useParams();
-  const { restaurants, loading: restaurantsLoading } = useRestaurants();
-  const { isCartOpen } = useCartOpen();
   const [menuSearchQuery, setMenuSearchQuery] = useState("");
+  const { isCartOpen } = useCartOpen();
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { data: restaurants = [], isLoading: loading } = useRestaurantsQuery();
 
   const restaurant = restaurants.find((r) => r.id === id);
-
-  const navigate = useNavigate();
-
-  const handleGoBack = () => {
-    navigate(-1); // go back to the previous page
-  };
-
-  if (restaurantsLoading) return <LoadingSpinner />;
-  if (!restaurant)
-    return <p className="text-white p-6">Restaurant not found.</p>;
 
   const {
     name,
@@ -31,21 +23,69 @@ export default function RestaurantMenuPage() {
     menu = [],
     rating,
     deliveryTime,
-    distance,
+    hours,
   } = restaurant;
 
-  const filteredMenu = menu.filter((item) =>
-    item.name.toLowerCase().includes(menuSearchQuery.toLowerCase())
+  const handleGoBack = () => {
+    navigate(-1);
+  };
+
+  useEffect(() => {
+    if (restaurant && !isRestaurantOpen(restaurant.hours)) {
+      toast("Heads up! This restaurant is currently closed.", {
+        // icon: "🕒",
+        position: "bottom-center",
+        className:
+          "bg-white text-red-900 border border-gray-400 rounded-lg whitespace-nowrap",
+        style: {
+          maxWidth: "100%",
+        },
+
+        duration: 5000,
+      });
+    }
+  }, [restaurant]);
+
+  if (loading) return <LoadingSpinner />;
+  if (!restaurant)
+    return <p className="text-white p-6">Restaurant not found.</p>;
+
+  function isRestaurantOpen(hours) {
+    if (!hours || hours.open == null || hours.close == null) return true;
+    const currentHour = new Date().getHours();
+    return currentHour >= hours.open && currentHour < hours.close;
+  }
+
+  const isOpen = isRestaurantOpen(hours);
+
+  const menuFilteredBySearch = Object.entries(menu || {}).reduce(
+    (acc, [category, items]) => {
+      if (!Array.isArray(items)) return acc;
+
+      const filteredItems = items.filter((item) =>
+        item.name.toLowerCase().includes(menuSearchQuery.toLowerCase())
+      );
+      if (filteredItems.length > 0) {
+        acc[category] = filteredItems;
+      }
+      return acc;
+    },
+    {}
   );
+
+  const fallbackBanner = "https://via.placeholder.com/1200x400?text=No+Image";
+  const fallbackLogo = "https://via.placeholder.com/150?text=No+Logo";
 
   return (
     <>
       {/* Header Image */}
       <div className="relative w-full h-96">
         <SkeletonImage
-          src={bannerImage}
+          src={bannerImage || fallbackBanner}
           alt={`${name} banner`}
-          className="h-96"
+          className={`h-96 w-full object-cover transition duration-500 ${
+            !isOpen ? "grayscale brightness-50" : ""
+          }`}
         />
         <div className="absolute inset-0 bg-black opacity-60" />
 
@@ -60,7 +100,7 @@ export default function RestaurantMenuPage() {
             {/* Left: Logo (desktop only) */}
             <div className="hidden md:block flex-shrink-0">
               <img
-                src={logo}
+                src={logo || fallbackLogo}
                 alt={`${name} logo`}
                 className="w-32 h-32 rounded-lg object-cover border-2 border-white"
               />
@@ -88,8 +128,9 @@ export default function RestaurantMenuPage() {
               {/* Info block (always below name) */}
               <div className="w-full md:w-fit rounded-2xl bg-gray-800/70 border border-gray-500/30 shadow-lg px-4 py-3 text-gray-400">
                 <span className="text-sm md:text-base leading-snug">
-                  ⭐ {rating} · Offline · Open 10:00-23:00 · Min. order
-                  MKD300.00 · Delivery time: {deliveryTime} mins
+                  ⭐ {rating} · {isOpen ? "Open" : "Closed now"} · Open{" "}
+                  {restaurant?.hours?.open}:00–{restaurant?.hours?.close}:00 ·
+                  Min. order MKD300.00 · Delivery time: {deliveryTime} mins
                 </span>
               </div>
             </div>
@@ -101,7 +142,7 @@ export default function RestaurantMenuPage() {
       <div className="bg-gray-100 dark:bg-gray-800 min-h-screen px-4 py-6">
         <div className="max-w-[1500px] mx-auto">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="hidden lg:flex text-3xl font-bold text-white mb-6">
+            <h2 className="hidden lg:flex text-3xl font-bold text-gray-800 dark:text-white mb-6">
               Menu
             </h2>
             <div className="relative">
@@ -134,18 +175,28 @@ export default function RestaurantMenuPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            {filteredMenu.length > 0 ? (
-              filteredMenu.map((item) => (
-                <MenuCard
-                  key={item.id}
-                  id={item.id}
-                  image={item.image}
-                  name={item.name}
-                  ingredients={item.ingredients}
-                  price={item.price}
-                  cartIsOpen={isCartOpen}
-                />
+          <div className="flex flex-col gap-8">
+            {Object.keys(menuFilteredBySearch).length > 0 ? (
+              Object.entries(menuFilteredBySearch).map(([category, items]) => (
+                <div key={category}>
+                  <h3 className="text-2xl font-semibold text-gray-800 dark:text-white mb-4">
+                    {category}
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    {items.map((item) => (
+                      <MenuCard
+                        key={item.id}
+                        id={item.id}
+                        image={item.image}
+                        name={item.name}
+                        description={item.description}
+                        price={item.price}
+                        cartIsOpen={isCartOpen}
+                        restaurantId={id}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))
             ) : (
               <p className="text-white">No menu items available.</p>

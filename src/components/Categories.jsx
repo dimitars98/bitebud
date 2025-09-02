@@ -161,17 +161,19 @@ const categories = [
   },
 ];
 
-export default function Categories() {
+export default function Categories({
+  restaurants,
+  setFilteredRestaurants,
+  setCategoryFilterActive,
+}) {
   const scrollRef = useRef(null);
   const [selectedCategory, setSelectedCategory] = useState(null); // Track selected
 
-  const { restaurants, setFilteredRestaurants } = useRestaurants();
-
   const handleFilterByCategory = (categoryName) => {
-    // Toggle selection: if clicked again, clear filter
     if (selectedCategory === categoryName) {
-      setFilteredRestaurants(null);
       setSelectedCategory(null);
+      setFilteredRestaurants(restaurants);
+      setCategoryFilterActive(false);
       return;
     }
 
@@ -197,13 +199,14 @@ export default function Categories() {
 
     setFilteredRestaurants(filtered);
     setSelectedCategory(categoryName);
+    setCategoryFilterActive(true);
   };
 
   const scroll = (direction) => {
     const container = scrollRef.current;
     if (!scrollRef.current) return;
 
-    const scrollAmount = 200;
+    const scrollAmount = 500;
     container.scrollBy({
       left: direction === "left" ? -scrollAmount : scrollAmount,
       behavior: "smooth",
@@ -211,7 +214,7 @@ export default function Categories() {
   };
 
   return (
-    <section className="bg-gray-100 dark:bg-gray-900 px-4 py-3 sm:px-6 lg:px-4 rounded-xl max-w-[1500px] mx-auto mt-4">
+    <section className="relative max-w-[1500px] mx-auto px-4 py-3 sm:px-6 lg:px-4 rounded-xl bg-gray-100 dark:bg-gray-900 mt-4">
       <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white mb-6">
         Categories
       </h2>
@@ -219,7 +222,7 @@ export default function Categories() {
         {/* Left arrow */}
         <button
           onClick={() => scroll("left")}
-          className="hidden sm:flex w-10 h-10 lg:w-12 lg:h-12 items-center justify-center absolute left-0 z-10 bg-opacity-50 rounded-full text-gray-900 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800 hover:bg-opacity-80 cursor-pointer transition-all duration-200 ease-in "
+          className="hidden sm:flex w-10 h-10 lg:w-12 lg:h-12 items-center justify-center absolute left-0 z-10 bg-opacity-50 rounded-full focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-amber-400 text-gray-900 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800 hover:bg-opacity-80 cursor-pointer transition-all duration-200 ease-in"
           aria-label="Scroll left"
         >
           <span className="material-symbols-rounded lg:text-4xl">
@@ -227,14 +230,16 @@ export default function Categories() {
           </span>
         </button>
 
-        {/* Scrollable container */}
+        {/* Scroll container */}
         <div
           ref={scrollRef}
-          className="flex overflow-x-auto overflow-y-visible space-x-3 sm:space-x-4 scrollbar-hide scroll-smooth px-2 sm:px-16 py-6"
+          className="flex overflow-x-auto overflow-y-visible space-x-3 sm:space-x-4 scrollbar-hide scroll-smooth py-6 md:ml-[3rem] md:mr-[3rem]"
           style={{
             scrollBehavior: "smooth",
             WebkitOverflowScrolling: "touch",
             scrollbarWidth: "none",
+            paddingLeft: "1rem",
+            paddingRight: "1rem",
           }}
         >
           {categories.map(({ id, name, image }) => (
@@ -250,7 +255,7 @@ export default function Categories() {
         {/* Right arrow */}
         <button
           onClick={() => scroll("right")}
-          className="hidden sm:flex w-10 h-10 lg:w-12 lg:h-12 items-center justify-center absolute right-0 z-10 bg-opacity-50 rounded-full text-gray-900 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800 hover:bg-opacity-80 cursor-pointer transition-all duration-200 ease-in-out"
+          className="hidden sm:flex w-10 h-10 lg:w-12 lg:h-12 items-center justify-center absolute right-0 z-10 bg-opacity-50 rounded-full focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-amber-400 text-gray-900 dark:text-gray-50 hover:bg-gray-200 dark:hover:bg-gray-800 hover:bg-opacity-80 cursor-pointer transition-all duration-200 ease-in-out"
           aria-label="Scroll right"
         >
           <span className="material-symbols-rounded text-2xl lg:text-3xl">

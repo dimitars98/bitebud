@@ -106,3 +106,17 @@ header {
 .animate-slide-up {
   animation: slide-up 0.3s ease-out forwards;
 }
+
+.dark input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0px 1000px #1f2937 inset !important;
+  -webkit-text-fill-color: #f9fafb !important;
+}
+
+.swiper-wrapper {
+  transition-timing-function: ease-in-out !important;
+}
+
+body.modal-open {
+  overflow: hidden;
+  padding-right: var(--scrollbar-width);
+}

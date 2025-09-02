@@ -1,102 +1,100 @@
 import { useEffect, useState } from "react";
 import RestaurantCard from "../components/RestaurantCard";
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "../../firebase";
+import { db } from "../firebase/firebase";
 import Categories from "../components/Categories";
 import LoadingSpinner from "../ui/LoadingSpinner";
 import { useSelector } from "react-redux";
 import { useOutletContext } from "react-router-dom";
 import ThemeToggle from "../ui/ThemeToggle";
-import RestaurantCardSkeleton from "../ui/RestaurantSkeleton";
+import RestaurantCardSkeleton from "../ui/RestaurantCardSkeleton";
 import CategoriesSkeleton from "../ui/CategoriesSkeleton";
 import { fetchDistances } from "..//utils/orsApi";
 import useSkeletonCount from "../hooks/useSkeletonCount";
 import RestaurantSlider from "../ui/RestaurantSlider";
 import { useRestaurants } from "../contexts/RestaurantContext";
-
-// function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-//   const R = 6371; // Radius of the Earth in km
-//   const dLat = deg2rad(lat2 - lat1);
-//   const dLon = deg2rad(lon2 - lon1);
-//   const a =
-//     Math.sin(dLat / 2) ** 2 +
-//     Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon / 2) ** 2;
-//   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-//   return R * c;
-// }
-
-// function deg2rad(deg) {
-//   return deg * (Math.PI / 180);
-// }
+import TopPicksSection from "../ui/TopPicksSection";
+import { useRestaurantsQuery } from "../hooks/useRestaurantsQuery";
+import { FilterIcon } from "lucide-react";
+import FilterModal from "../modals/FilterModal";
+import { useFilterContext } from "../contexts/FilterContext";
 
 export default function Home() {
-  // const [restaurants, setRestaurants] = useState([]);
-  // const [loading, setLoading] = useState(true);
+  const [showFilterModal, setShowFilterModal] = useState(false);
 
-  const { restaurants, loading, filteredRestaurants } = useRestaurants();
+  const {
+    filters,
+    setFilters,
+    showNearbyOnly,
+    setShowNearbyOnly,
+    filteredRestaurants,
+    setFilteredRestaurants,
+    categoryFilterActive,
+    setCategoryFilterActive,
+  } = useFilterContext();
+
+  function resetFilters() {
+    setFilters({
+      maxDistance: 150,
+      tags: [],
+    });
+    setCategoryFilterActive(false);
+    setShowNearbyOnly(false);
+    setFilteredRestaurants([]);
+  }
+
+  const {
+    data: restaurants = [],
+    isLoading: loading,
+    isError,
+    error,
+  } = useRestaurantsQuery();
 
   const searchQuery = useSelector((state) => state.ui.searchQuery);
 
+  const handleSeeAllNearby = () => {
+    setShowNearbyOnly(true);
+  };
+
+  const filtersAreActive = filters.tags.length > 0 || filters.maxDistance < 150;
+
   const baseList =
-    filteredRestaurants.length > 0 ? filteredRestaurants : restaurants;
+    filtersAreActive || categoryFilterActive
+      ? filteredRestaurants
+      : restaurants;
 
   const finalList = baseList.filter((rest) =>
     rest?.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const nearbyRestaurants = restaurants
-    .sort((a, b) => a.distance - b.distance) // closest first
-    .slice(0, 15); // limit to 15
+  const nearbyRestaurants = [...restaurants]
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, 10);
 
   const skeletonCount = useSkeletonCount();
 
-  // useEffect(() => {
-  //   navigator.geolocation.getCurrentPosition(
-  //     async (position) => {
-  //       try {
-  //         const userLat = position.coords.latitude;
-  //         const userLng = position.coords.longitude;
-  //         const userCoords = { lat: userLat, lng: userLng };
+  useEffect(() => {
+    if (!restaurants || restaurants.length === 0) return;
 
-  //         const querySnapshot = await getDocs(collection(db, "restaurants"));
-  //         const fetchedRestaurants = [];
+    let filtered = restaurants;
 
-  //         querySnapshot.forEach((doc) => {
-  //           fetchedRestaurants.push({ id: doc.id, ...doc.data() });
-  //         });
+    if (filters.maxDistance !== null) {
+      filtered = filtered.filter(
+        (rest) => rest.distance <= filters.maxDistance
+      );
+    }
 
-  //         // Call your ORS API helper function here
-  //         const { distances, validRestaurants } = await fetchDistances(
-  //           userCoords,
-  //           fetchedRestaurants
-  //         );
+    if (filters.tags.length > 0) {
+      filtered = filtered.filter((rest) =>
+        filters.tags.some((tag) => rest.tags?.includes(tag))
+      );
+    }
 
-  //         // Merge distances back to valid restaurants and convert meters to km
-  //         const restaurantsWithDistances = validRestaurants.map((rest, i) => ({
-  //           ...rest,
-  //           distance: distances[i] / 1000,
-  //         }));
-
-  //         // Sort by distance
-  //         restaurantsWithDistances.sort((a, b) => b.distance - a.distance);
-
-  //         setRestaurants(restaurantsWithDistances);
-  //         setLoading(false);
-  //       } catch (error) {
-  //         console.error("Failed to fetch distances:", error);
-  //         setLoading(false);
-  //       }
-  //     },
-  //     (error) => {
-  //       console.error("Geolocation error:", error);
-  //       setLoading(false);
-  //     }
-  //   );
-  // }, []);
+    setFilteredRestaurants(filtered);
+  }, [filters, restaurants, setFilteredRestaurants]);
 
   // if (loading) return <LoadingSpinner />;
   if (loading) {
-    // Show 6 skeleton cards as placeholder
     return (
       <div className="relative min-h-screen bg-white dark:bg-black">
         {/* <div className="fixed bottom-4 right-4 z-30">
@@ -118,27 +116,74 @@ export default function Home() {
 
   return (
     <div className="relative bg-white dark:bg-black">
-      <Categories />
-      <RestaurantSlider
-        restaurants={nearbyRestaurants}
-        title="Restaurants Near You"
+      <Categories
+        restaurants={restaurants}
+        setFilteredRestaurants={setFilteredRestaurants}
+        setCategoryFilterActive={setCategoryFilterActive}
       />
-      <div className="max-w-[1500px] px-4 mx-auto md:px-8">
-        <h1 className="text-2xl font-semibold mb-4 text-gray-900 dark:text-gray-50">
-          All restaurants
-        </h1>
+
+      <div className="max-w-[1500px] mx-auto px-4 md:px-8 flex justify-end pt-4">
+        <button
+          onClick={() => setShowFilterModal(true)}
+          className="flex items-center gap-2 px-3 py-2 text-sm dark:text-gray-100 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-md"
+        >
+          <FilterIcon className="w-4 h-4" />
+          Filters
+        </button>
       </div>
-      <div className="flex items-center">
-        <section className="max-w-[1500px] mx-auto px-4 gap-4 py-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 md:gap-x-6 gap-y-4 z-20">
-          {finalList.length === 0 ? (
-            <p className="text-gray-900 dark:text-gray-50">
-              No restaurants found.
-            </p>
-          ) : (
-            finalList.map((rest) => <RestaurantCard key={rest.id} {...rest} />)
-          )}
-        </section>
-      </div>
+
+      <FilterModal
+        isOpen={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        filters={filters}
+        setFilters={setFilters}
+      />
+
+      {showNearbyOnly || categoryFilterActive ? (
+        <div className="max-w-[1500px] mx-auto px-4 md:px-8 py-6">
+          <h1 className="text-2xl font-semibold mb-4 text-gray-900 dark:text-gray-50">
+            {showNearbyOnly ? "All Nearby Restaurants" : "Filtered Restaurants"}
+          </h1>
+          <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {finalList.length === 0 ? (
+              <p className="text-gray-900 dark:text-gray-50">
+                No restaurants found.
+              </p>
+            ) : (
+              finalList.map((rest) => (
+                <RestaurantCard key={rest.id} {...rest} />
+              ))
+            )}
+          </section>
+        </div>
+      ) : (
+        <>
+          <RestaurantSlider
+            restaurants={nearbyRestaurants}
+            title="Offers near you"
+            onSeeAll={handleSeeAllNearby}
+          />
+          <TopPicksSection restaurants={finalList} />
+          <div className="max-w-[1500px] px-4 mx-auto md:px-8">
+            <h1 className="text-2xl font-semibold mb-4 text-gray-900 dark:text-gray-50">
+              All restaurants
+            </h1>
+          </div>
+          <div className="flex items-center">
+            <section className="max-w-[1500px] mx-auto px-4 gap-4 py-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 md:gap-x-6 gap-y-4 z-20">
+              {finalList.length === 0 ? (
+                <p className="text-gray-900 dark:text-gray-50">
+                  No restaurants found.
+                </p>
+              ) : (
+                finalList.map((rest) => (
+                  <RestaurantCard key={rest.id} {...rest} />
+                ))
+              )}
+            </section>
+          </div>
+        </>
+      )}
     </div>
   );
 }

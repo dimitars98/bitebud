@@ -1,23 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import ThemeToggle from "../ui/ThemeToggle";
 import { useSelector, useDispatch } from "react-redux";
 import { signOut } from "firebase/auth";
-import { auth } from "../../firebase";
-import { onLog } from "firebase/app";
-import { setSearchQuery } from "../features/ui/uiSlice"; // adjust path
+import { auth } from "../firebase/firebase";
+import { setSearchQuery } from "../features/ui/uiSlice";
 import { motion, AnimatePresence } from "framer-motion";
+import { useFilterContext } from "../contexts/FilterContext";
 
-export default function Navbar({
-  onCartClick,
-  onLoginClick,
-  onSignUpClick,
-  isDarkTheme,
-  setIsDarkTheme,
-}) {
+export default function Navbar({ onCartClick, onLoginClick, onSignUpClick }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const profileRef = useRef(null);
+  const profileDropdownRef = useRef(null);
   const dropdownRef = useRef(null);
-  const mobileToggleButtonRef = useRef(null); // <--- ADD THIS NEW REF
+  const mobileToggleButtonRef = useRef(null);
+
+  const { resetFilters } = useFilterContext();
 
   const dispatch = useDispatch();
 
@@ -31,6 +29,7 @@ export default function Navbar({
     } catch (err) {
       console.error("Logout failed:", err.message);
     }
+    setMenuOpen(false);
   };
 
   const handleLoginClick = () => {
@@ -40,15 +39,12 @@ export default function Navbar({
 
   useEffect(() => {
     function handleClickOutside(event) {
-      // Step 1: Check if the click originated from the mobile toggle button itself.
-      // If it did, we should ignore this click for the outside handler.
       if (
         mobileToggleButtonRef.current &&
         mobileToggleButtonRef.current.contains(event.target)
       )
-        return; // Exit early, don't close the menu
+        return;
 
-      // Step 2: Proceed with the regular outside click logic for the dropdown.
       if (dropdownRef.current) {
         const isClickInsideDropdown = dropdownRef.current.contains(
           event.target
@@ -63,16 +59,38 @@ export default function Navbar({
     if (menuOpen) {
       const timeoutId = setTimeout(() => {
         document.addEventListener("mousedown", handleClickOutside);
-      }, 50); // Small delay
+      }, 50);
 
       return () => {
         clearTimeout(timeoutId);
         document.removeEventListener("mousedown", handleClickOutside);
       };
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [menuOpen]); // Dependencies
+  }, [menuOpen]);
+
+  useEffect(() => {
+    function handleClickOutsideProfileDropdown(e) {
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(e.target) &&
+        profileRef.current &&
+        !profileRef.current.contains(e.target)
+      ) {
+        setProfileDropdownOpen(false);
+      }
+    }
+
+    if (profileDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutsideProfileDropdown);
+    }
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        handleClickOutsideProfileDropdown
+      );
+    };
+  }, [profileDropdownOpen]);
 
   useEffect(() => {
     if (user) {
@@ -81,17 +99,21 @@ export default function Navbar({
   }, [user]);
 
   return (
-    <nav className="h-20 border-b dark:border-gray-800 border-gray-200 bg-white dark:bg-gray-900 shadow-md sticky top-0 z-50 px-4 sm:px-6 py-4">
+    <nav className="border-b flex flex-col items-center dark:border-gray-800 border-gray-200 bg-white dark:bg-gray-900 shadow-md sticky top-0 z-50 px-4 sm:px-6 py-4">
       {/* Mobile layout: centered logo with right-aligned icons */}
 
       <div className="sm:hidden flex justify-between items-center w-full h-full px-2">
         {/* Left: Logo */}
-        <Link to="/" className="text-2xl font-bold text-yellow-500">
-          SkopjeEats
+        <Link
+          to="/"
+          onClick={resetFilters}
+          className="text-2xl font-bold text-yellow-500"
+        >
+          Bite<span className="text-gray-800 dark:text-white">Bud</span>
         </Link>
 
         {/* Right: Icons */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2">
           {/* <ThemeToggle toggleTheme={toggleTheme} isDarkTheme={isDarkTheme} /> */}
 
           <button
@@ -102,10 +124,68 @@ export default function Navbar({
               shopping_bag
             </span>
           </button>
+          {user && (
+            <div
+              ref={profileRef}
+              onClick={() => setProfileDropdownOpen((prev) => !prev)}
+              className="relative flex items-center gap-2 mr-2 transition cursor-pointer"
+            >
+              {user.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt="Avatar"
+                  className="w-8 h-8 rounded-full"
+                />
+              ) : (
+                <span className="material-symbols-rounded text-2xl dark:text-gray-400">
+                  account_circle
+                </span>
+              )}
+              <span className="text-sm text-gray-800 dark:text-gray-200">
+                Profile
+              </span>
+
+              {/* Dropdown */}
+              <AnimatePresence>
+                {profileDropdownOpen && (
+                  <motion.div
+                    ref={profileDropdownRef}
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute top-[110%] right-0 mt-2 w-48 bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 rounded-lg z-50"
+                  >
+                    <div className="flex flex-col text-sm text-gray-800 dark:text-gray-100">
+                      <Link
+                        to="/profile"
+                        className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                        onClick={() => setProfileDropdownOpen(false)}
+                      >
+                        My Profile
+                      </Link>
+                      <button
+                        onClick={() => alert("Change language")}
+                        className="px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                      >
+                        Language: EN
+                      </button>
+                      <button
+                        onClick={handleLogout}
+                        className="px-4 py-2 text-left text-red-500 hover:bg-red-100 dark:hover:bg-red-900 dark:hover:text-white transition"
+                      >
+                        Log Out
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
           <button
             ref={mobileToggleButtonRef}
             onClick={(e) => {
-              e.stopPropagation(); // <--- Add this line
+              e.stopPropagation();
               setMenuOpen(!menuOpen);
             }}
             className="flex items-center justify-center h-full text-gray-800 dark:text-gray-400 focus:outline-none"
@@ -140,12 +220,18 @@ export default function Navbar({
       </div>
 
       {/* Desktop layout: original layout untouched */}
-      <div className="hidden sm:flex justify-between items-center flex-wrap gap-4 max-w-[1500px] mx-auto">
-        <Link to="/" className="text-2xl font-bold text-yellow-500">
-          SkopjeEats
+      <div className="hidden sm:flex items-center justify-between h-full w-full max-w-[1500px] mx-auto relative">
+        {/* Left: Logo */}
+        <Link
+          to="/"
+          onClick={resetFilters}
+          className="text-3xl font-bold text-yellow-500 shrink-0 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-amber-400"
+        >
+          Bite<span className="text-gray-800 dark:text-white">Bud</span>
         </Link>
 
-        <div className="transition-all duration-300 w-70 focus-within:w-100 px-4">
+        {/* <div className="transition-all duration-300 w-70 focus-within:w-100 px-4"> */}
+        <div className="absolute left-1/2 transform -translate-x-1/2 transition-all duration-300 w-[280px] focus-within:w-[380px]">
           <div className="relative">
             <span className="material-symbols-rounded absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none">
               search
@@ -156,7 +242,7 @@ export default function Navbar({
               placeholder="Search restaurants..."
               value={searchQuery}
               onChange={(e) => dispatch(setSearchQuery(e.target.value))}
-              className="focus:border-2 placeholder-gray-500 dark:text-white focus:border-yellow-500 outline-none py-3 pl-12 pr-10 w-full rounded-4xl transition-colors duration-300 ease-in bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+              className="border border-transparent focus:border-2 placeholder-gray-500 dark:text-white focus:border-yellow-500 outline-none py-3 pl-12 pr-10 w-full rounded-4xl transition-colors duration-300 ease-in bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
             />
 
             {searchQuery && (
@@ -175,7 +261,7 @@ export default function Navbar({
           <div className="hidden sm:flex items-center space-x-4 text-gray-900">
             <button
               onClick={onCartClick}
-              className="flex items-center justify-center h-full focus:outline-none hover:text-amber-400 cursor-pointer transition-all duration-200 ease-in dark:text-gray-400"
+              className="flex items-center justify-center h-full focus:outline-none hover:text-amber-400 cursor-pointer transition-all duration-200 ease-in dark:text-gray-400 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-amber-400"
             >
               <span className="material-symbols-rounded">shopping_bag</span>
             </button>
@@ -186,37 +272,23 @@ export default function Navbar({
               <>
                 <button
                   onClick={onLoginClick}
-                  className="text-sm px-4 py-2 rounded-lg border border-yellow-500 hover:bg-yellow-500 hover:text-white transition duration-200 ease-in cursor-pointer dark:text-white"
+                  className="text-sm px-4 py-2 rounded-lg border border-yellow-500 hover:bg-yellow-500 hover:text-white transition duration-200 ease-in cursor-pointer dark:text-white focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-amber-400"
                 >
                   Log In
                 </button>
                 <button
                   onClick={onSignUpClick}
-                  className="text-sm px-4 py-2 rounded-lg bg-yellow-500 text-white hover:bg-yellow-600 transition duration-200 ease-in cursor-pointer"
+                  className="text-sm px-4 py-2 rounded-lg bg-yellow-500 text-white hover:bg-yellow-600 transition duration-200 ease-in cursor-pointer focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-amber-400"
                 >
                   Sign Up
                 </button>
               </>
             ) : (
-              <div className="flex gap-3">
-                {/* <div className="flex items-center gap-2 mr-2">
-                  {user.photoURL && (
-                    <img
-                      src={user.photoURL}
-                      alt="Avatar"
-                      className="w-8 h-8 rounded-full"
-                    />
-                  )}
-                  {user.displayName && (
-                    <span className="text-sm text-gray-800 dark:text-gray-200">
-                      {user.displayName}
-                    </span>
-                  )}
-                </div> */}
-
-                <Link
-                  to="profile"
-                  className="flex items-center gap-2 mr-2 transition"
+              <div className="flex gap-3 relative">
+                <div
+                  ref={profileRef}
+                  onClick={() => setProfileDropdownOpen((prev) => !prev)}
+                  className="relative flex items-center gap-2 mr-2 transition cursor-pointer select-none"
                 >
                   {user.photoURL ? (
                     <img
@@ -232,14 +304,44 @@ export default function Navbar({
                   <span className="text-sm text-gray-800 dark:text-gray-200">
                     Profile
                   </span>
-                </Link>
 
-                <button
-                  onClick={handleLogout}
-                  className="text-sm px-4 py-2 rounded-lg border border-red-500 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-300 ease-in-out cursor-pointer"
-                >
-                  Log Out
-                </button>
+                  {/* Dropdown */}
+                  <AnimatePresence>
+                    {profileDropdownOpen && (
+                      <motion.div
+                        ref={profileDropdownRef}
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute top-[110%] right-0 mt-2 w-48 bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 rounded-lg z-50"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex flex-col text-sm text-gray-800 dark:text-gray-100">
+                          <Link
+                            to="/profile"
+                            className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                            onClick={() => setProfileDropdownOpen(false)}
+                          >
+                            My Profile
+                          </Link>
+                          <button
+                            onClick={() => alert("Change language")}
+                            className="px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                          >
+                            Language: EN
+                          </button>
+                          <button
+                            onClick={handleLogout}
+                            className="px-4 py-2 text-left text-red-500 hover:bg-red-100 dark:hover:bg-red-900 dark:hover:text-white transition"
+                          >
+                            Log Out
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             )}
           </div>
@@ -257,7 +359,6 @@ export default function Navbar({
             transition={{ duration: 0.3, ease: "easeInOut" }}
             className="flex flex-col justify-between h-60 -mx-4 sm:mx-0 mt-4 pb-12 space-y-4 bg-white dark:bg-gray-900 w-screen px-4 origin-top"
           >
-            {/* Your mobile menu content (search input, buttons, etc.) */}
             <div className="relative w-full">
               <span className="material-symbols-rounded absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500">
                 search

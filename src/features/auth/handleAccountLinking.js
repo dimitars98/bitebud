@@ -37,14 +37,14 @@ export async function handleAccountLinking({
     existingProvider = new GoogleAuthProvider();
   } else if (methods.includes("facebook.com")) {
     existingProvider = new FacebookAuthProvider();
-  } // You can add other providers like Apple here too
+  }
 
   if (existingProvider) {
     try {
       const result = await signInWithPopup(auth, existingProvider);
       await linkWithCredential(result.user, pendingCred);
       onSuccess();
-    } catch (linkError) {
+    } catch (err) {
       setError(
         "Could not link account to existing provider. Please try logging in with the original method."
       );
