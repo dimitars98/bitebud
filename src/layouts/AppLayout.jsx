@@ -103,16 +103,13 @@ export default function AppLayout({ fullWidth = false }) {
         onTriggerLogin={openAuth}
       />
 
-      <AnimatePresence>
-        {isAuthOpen && (
-          <Modal isOpen={isAuthOpen} onClose={closeAuth} key="auth-modal">
-            <Modal.CloseButton />
-            <Modal.Body>
-              <AuthModal initialMode={authMode} onSuccess={handleAuthSuccess} />
-            </Modal.Body>
-          </Modal>
-        )}
-      </AnimatePresence>
+      <Modal isOpen={isAuthOpen} onClose={closeAuth} key="auth-modal">
+        <Modal.CloseButton />
+        <Modal.Body>
+          <AuthModal initialMode={authMode} onSuccess={handleAuthSuccess} />
+        </Modal.Body>
+      </Modal>
+
       {/* {isAuthOpen && (
         <AuthModal
           isOpen={isAuthOpen}
