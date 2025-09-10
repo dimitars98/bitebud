@@ -80,19 +80,26 @@ export default function Modal({ isOpen, onClose, children }) {
             />
 
             {/* Modal Container */}
-            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div
+              className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: isOpen ? 1 : 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              style={{ pointerEvents: isOpen ? "auto" : "none" }}
+            >
               <motion.div
                 key="modal"
                 ref={contentRef}
                 initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
+                animate={{ opacity: isOpen ? 1 : 0, scale: isOpen ? 1 : 0.95 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.25 }}
                 className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6 relative"
               >
                 {children}
               </motion.div>
-            </div>
+            </motion.div>
           </>
         )}
       </AnimatePresence>
