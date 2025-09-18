@@ -15,7 +15,11 @@ import toast from "react-hot-toast";
 import { useForm } from "react-hook-form";
 import { doc, setDoc } from "firebase/firestore";
 
-export default function AuthModal({ initialMode = "login", onSuccess }) {
+export default function AuthModal({
+  initialMode = "login",
+  onSuccess,
+  onClose,
+}) {
   const [mode, setMode] = useState(initialMode);
   const [step, setStep] = useState("email");
   const [email, setEmail] = useState("");

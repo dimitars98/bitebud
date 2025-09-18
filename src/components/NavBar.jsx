@@ -99,7 +99,7 @@ export default function Navbar({ onCartClick, onLoginClick, onSignUpClick }) {
   }, [user]);
 
   return (
-    <nav className="border-b flex flex-col items-center dark:border-gray-800 border-gray-200 bg-white dark:bg-gray-900 shadow-md sticky top-0 z-50 px-4 sm:px-6 py-4">
+    <nav className="border-b flex flex-col items-center dark:border-gray-800 border-gray-200 bg-white dark:bg-gray-900 shadow-md sticky top-0 z-50 px-2 md:px-4 sm:px-6 py-4">
       {/* Mobile layout: centered logo with right-aligned icons */}
 
       <div className="sm:hidden flex justify-between items-center w-full h-full px-2">
@@ -141,7 +141,7 @@ export default function Navbar({ onCartClick, onLoginClick, onSignUpClick }) {
                   account_circle
                 </span>
               )}
-              <span className="text-sm text-gray-800 dark:text-gray-200">
+              <span className="hidden md:block text-sm text-gray-800 dark:text-gray-200">
                 Profile
               </span>
 
@@ -188,13 +188,15 @@ export default function Navbar({ onCartClick, onLoginClick, onSignUpClick }) {
               e.stopPropagation();
               setMenuOpen(!menuOpen);
             }}
-            className="flex items-center justify-center h-full text-gray-800 dark:text-gray-400 focus:outline-none"
+            className={`${
+              user ? "hidden" : ""
+            } flex items-center justify-center h-full text-gray-800 dark:text-gray-400 focus:outline-none`}
           >
             <AnimatePresence mode="wait" initial={false}>
               {menuOpen ? (
                 <motion.span
                   key="close"
-                  className="material-symbols-rounded text-2xl leading-none"
+                  className="material-symbols-rounded text-2xl leading-none flex items-center justify-center"
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8 }}

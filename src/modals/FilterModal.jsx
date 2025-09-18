@@ -1,4 +1,4 @@
-import Modal from "./Modal"; // your reusable modal
+import Modal from "./Modal";
 
 const TAGS = ["Vegan", "Vegetarian", "Free delivery"];
 

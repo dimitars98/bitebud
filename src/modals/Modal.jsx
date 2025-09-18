@@ -115,7 +115,11 @@ Modal.Header = function ModalHeader({ children }) {
 };
 
 Modal.Body = function ModalBody({ children }) {
-  return <div className="h-fit mb-4 dark:text-white">{children}</div>;
+  return (
+    <div className="max-h-[80vh] mb-4 dark:text-white overflow-y-auto">
+      {children}
+    </div>
+  );
 };
 
 Modal.Footer = function ModalFooter({ children }) {
@@ -138,7 +142,7 @@ Modal.CloseButton = function ModalCloseButton() {
   return (
     <button
       onClick={onClose}
-      className="absolute top-2 right-2 w-12 h-12 flex items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-amber-400 text-gray-500 hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-[var(--color-grey-700)] cursor-pointer text-2xl leading-none"
+      className="absolute z-[70] top-2 right-2 w-12 h-12 flex items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-amber-400 text-gray-500 hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-[var(--color-grey-700)] cursor-pointer text-2xl leading-none"
       aria-label="Close"
     >
       ✕

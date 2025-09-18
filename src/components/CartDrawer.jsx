@@ -122,7 +122,7 @@ export default function CartDrawer({ isOpen, onClose, onTriggerLogin }) {
           }}
           disabled={shouldDisableOrderButton}
           className={`w-full mt-6 font-semibold py-3 rounded-xl transition-all ${
-            shouldDisableOrderButton
+            !shouldDisableOrderButton
               ? "bg-gray-300 text-gray-500 cursor-not-allowed"
               : "bg-yellow-400 text-black hover:bg-yellow-300"
           }`}
