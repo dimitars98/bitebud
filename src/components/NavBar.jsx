@@ -99,7 +99,7 @@ export default function Navbar({ onCartClick, onLoginClick, onSignUpClick }) {
   }, [user]);
 
   return (
-    <nav className="border-b flex flex-col items-center dark:border-gray-800 border-gray-200 bg-white dark:bg-gray-900 shadow-md sticky top-0 z-50 px-2 md:px-4 sm:px-6 py-4">
+    <nav className="border-b flex flex-col items-center dark:border-gray-800 border-gray-200 bg-white dark:bg-gray-900 shadow-md sticky top-0 z-30 px-2 md:px-4 sm:px-6 py-4">
       {/* Mobile layout: centered logo with right-aligned icons */}
 
       <div className="sm:hidden flex justify-between items-center w-full h-full px-2">

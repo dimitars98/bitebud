@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef } from "react";
 import { useRestaurantsQuery } from "../hooks/useRestaurantsQuery";
 import { isRestaurantOpen } from "../helpers/isRestaurantOpen";
+import { motion } from "framer-motion";
 
 export default function CartDrawer({ isOpen, onClose, onTriggerLogin }) {
   const drawerRef = useRef(null);
@@ -16,13 +17,12 @@ export default function CartDrawer({ isOpen, onClose, onTriggerLogin }) {
 
   const { data: restaurants = [] } = useRestaurantsQuery();
   const restaurant = restaurants.find((r) => r.id === restaurantId);
-  console.log({ restaurantId, restaurant, restaurants });
 
   const isRestaurantClosed = restaurant && !isRestaurantOpen(restaurant.hours);
 
   const cartHasItems = cartItems.length > 0;
   const shouldDisableOrderButton = cartHasItems && isRestaurantClosed;
-  const orderButtonText = shouldDisableOrderButton ? "Closed" : "Order Now";
+  const orderButtonText = isRestaurantClosed ? "Closed" : "Order Now";
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -57,11 +57,12 @@ export default function CartDrawer({ isOpen, onClose, onTriggerLogin }) {
         }`}
       />
 
-      <div
+      <motion.div
         ref={drawerRef}
-        className={`flex justify-between flex-col fixed right-0 top-0 h-full w-screen md:w-100 bg-white dark:bg-gray-800 dark:text-white shadow-lg transition-transform duration-300 z-50 md:rounded-tl-2xl md:rounded-bl-xl ${
-          isOpen ? "translate-x-0" : "translate-x-full"
-        }`}
+        initial={{ x: "100%" }}
+        animate={{ x: isOpen ? 0 : "100%" }}
+        transition={{ type: "tween", duration: 0.5, ease: "easeInOut" }}
+        className="flex justify-between flex-col fixed right-0 top-0 h-full w-screen md:w-100 bg-white dark:bg-gray-800 dark:text-white shadow-lg z-50 md:rounded-tl-2xl md:rounded-bl-xl"
       >
         <div className="p-4">
           <div className="flex justify-between items-center mb-4">
@@ -120,16 +121,16 @@ export default function CartDrawer({ isOpen, onClose, onTriggerLogin }) {
               navigate("/checkout", { state: { restaurantId } });
             }
           }}
-          disabled={shouldDisableOrderButton}
+          disabled={!shouldDisableOrderButton}
           className={`w-full mt-6 font-semibold py-3 rounded-xl transition-all ${
-            !shouldDisableOrderButton
+            shouldDisableOrderButton
               ? "bg-gray-300 text-gray-500 cursor-not-allowed"
               : "bg-yellow-400 text-black hover:bg-yellow-300"
           }`}
         >
           {orderButtonText}
         </button>
-      </div>
+      </motion.div>
     </>
   );
 }
