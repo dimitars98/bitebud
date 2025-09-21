@@ -6,17 +6,6 @@ const ModalContext = createContext(null);
 
 export default function Modal({ isOpen, onClose, children }) {
   const contentRef = useRef(null);
-  const [hasMounted, setHasMounted] = useState(false);
-
-  const handleExitComplete = () => {
-    if (!isOpen) setHasMounted(false);
-  };
-
-  useEffect(() => {
-    if (isOpen) {
-      setHasMounted(true);
-    }
-  }, [isOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -62,11 +51,9 @@ export default function Modal({ isOpen, onClose, children }) {
     };
   }, [isOpen]);
 
-  if (!hasMounted) return null;
-
   return createPortal(
     <ModalContext.Provider value={{ onClose }}>
-      <AnimatePresence onExitComplete={handleExitComplete}>
+      <AnimatePresence>
         {isOpen && (
           <>
             {/* Backdrop */}

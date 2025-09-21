@@ -214,7 +214,7 @@ export default function Categories({
   };
 
   return (
-    <section className="relative max-w-[1500px] mx-auto px-4 py-3 sm:px-6 lg:px-4 rounded-xl bg-gray-100 dark:bg-gray-900 mt-4">
+    <section className="relative max-w-[1500px] md:mx-auto mx-3 px-4 py-3 sm:px-6 lg:px-4 rounded-xl bg-gray-100 dark:bg-gray-900 mt-4">
       <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white mb-6">
         Categories
       </h2>

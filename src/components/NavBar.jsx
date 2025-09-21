@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { signOut } from "firebase/auth";
@@ -6,22 +6,25 @@ import { auth } from "../firebase/firebase";
 import { setSearchQuery } from "../features/ui/uiSlice";
 import { motion, AnimatePresence } from "framer-motion";
 import { useFilterContext } from "../contexts/FilterContext";
+import { useCart } from "../contexts/CartContext";
 
 export default function Navbar({ onCartClick, onLoginClick, onSignUpClick }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+
+  const mobileDropdownRef = useRef(null);
   const profileRef = useRef(null);
   const profileDropdownRef = useRef(null);
-  const dropdownRef = useRef(null);
   const mobileToggleButtonRef = useRef(null);
 
   const { resetFilters } = useFilterContext();
-
   const dispatch = useDispatch();
 
   const user = useSelector((state) => state.auth.user);
-
   const searchQuery = useSelector((state) => state.ui.searchQuery);
+
+  const { cartItems } = useCart();
+  const cartCount = cartItems.length;
 
   const handleLogout = async () => {
     try {
@@ -30,6 +33,7 @@ export default function Navbar({ onCartClick, onLoginClick, onSignUpClick }) {
       console.error("Logout failed:", err.message);
     }
     setMenuOpen(false);
+    setProfileDropdownOpen(false);
   };
 
   const handleLoginClick = () => {
@@ -37,73 +41,10 @@ export default function Navbar({ onCartClick, onLoginClick, onSignUpClick }) {
     onLoginClick();
   };
 
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (
-        mobileToggleButtonRef.current &&
-        mobileToggleButtonRef.current.contains(event.target)
-      )
-        return;
-
-      if (dropdownRef.current) {
-        const isClickInsideDropdown = dropdownRef.current.contains(
-          event.target
-        );
-
-        if (!isClickInsideDropdown) {
-          setMenuOpen(false);
-        }
-      }
-    }
-
-    if (menuOpen) {
-      const timeoutId = setTimeout(() => {
-        document.addEventListener("mousedown", handleClickOutside);
-      }, 50);
-
-      return () => {
-        clearTimeout(timeoutId);
-        document.removeEventListener("mousedown", handleClickOutside);
-      };
-    }
-  }, [menuOpen]);
-
-  useEffect(() => {
-    function handleClickOutsideProfileDropdown(e) {
-      if (
-        profileDropdownRef.current &&
-        !profileDropdownRef.current.contains(e.target) &&
-        profileRef.current &&
-        !profileRef.current.contains(e.target)
-      ) {
-        setProfileDropdownOpen(false);
-      }
-    }
-
-    if (profileDropdownOpen) {
-      document.addEventListener("mousedown", handleClickOutsideProfileDropdown);
-    }
-
-    return () => {
-      document.removeEventListener(
-        "mousedown",
-        handleClickOutsideProfileDropdown
-      );
-    };
-  }, [profileDropdownOpen]);
-
-  useEffect(() => {
-    if (user) {
-      setMenuOpen(false);
-    }
-  }, [user]);
-
   return (
     <nav className="border-b flex flex-col items-center dark:border-gray-800 border-gray-200 bg-white dark:bg-gray-900 shadow-md sticky top-0 z-30 px-2 md:px-4 sm:px-6 py-4">
-      {/* Mobile layout: centered logo with right-aligned icons */}
-
+      {/* Mobile layout */}
       <div className="sm:hidden flex justify-between items-center w-full h-full px-2">
-        {/* Left: Logo */}
         <Link
           to="/"
           onClick={resetFilters}
@@ -112,23 +53,29 @@ export default function Navbar({ onCartClick, onLoginClick, onSignUpClick }) {
           Bite<span className="text-gray-800 dark:text-white">Bud</span>
         </Link>
 
-        {/* Right: Icons */}
         <div className="flex items-center space-x-2">
-          {/* <ThemeToggle toggleTheme={toggleTheme} isDarkTheme={isDarkTheme} /> */}
-
           <button
             onClick={onCartClick}
-            className="flex items-center justify-center h-full"
+            className="relative flex items-center justify-center h-full"
           >
             <span className="material-symbols-rounded text-gray-800 dark:text-gray-400 text-2xl leading-none">
               shopping_bag
             </span>
+            {cartCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-zinc-800 dark:bg-zinc-100 text-white dark:text-black text-xs font-bold h-4 w-4 flex items-center justify-center rounded-full text-center">
+                {cartCount}
+              </span>
+            )}
           </button>
+
           {user && (
             <div
               ref={profileRef}
-              onClick={() => setProfileDropdownOpen((prev) => !prev)}
-              className="relative flex items-center gap-2 mr-2 transition cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                setProfileDropdownOpen((prev) => !prev);
+              }}
+              className="relative flex items-center gap-2 mr-2 transition cursor-pointer z-50"
             >
               {user.photoURL ? (
                 <img
@@ -145,7 +92,6 @@ export default function Navbar({ onCartClick, onLoginClick, onSignUpClick }) {
                 Profile
               </span>
 
-              {/* Dropdown */}
               <AnimatePresence>
                 {profileDropdownOpen && (
                   <motion.div
@@ -154,7 +100,8 @@ export default function Navbar({ onCartClick, onLoginClick, onSignUpClick }) {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -5 }}
                     transition={{ duration: 0.2 }}
-                    className="absolute top-[110%] right-0 mt-2 w-48 bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 rounded-lg z-50"
+                    className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 rounded-lg z-50"
+                    onClick={(e) => e.stopPropagation()}
                   >
                     <div className="flex flex-col text-sm text-gray-800 dark:text-gray-100">
                       <Link
@@ -182,10 +129,11 @@ export default function Navbar({ onCartClick, onLoginClick, onSignUpClick }) {
               </AnimatePresence>
             </div>
           )}
+
           <button
             ref={mobileToggleButtonRef}
             onClick={(e) => {
-              e.stopPropagation();
+              e.stopPropagation(); // prevent overlay closing immediately
               setMenuOpen(!menuOpen);
             }}
             className={`${
@@ -221,9 +169,8 @@ export default function Navbar({ onCartClick, onLoginClick, onSignUpClick }) {
         </div>
       </div>
 
-      {/* Desktop layout: original layout untouched */}
+      {/* Desktop layout */}
       <div className="hidden sm:flex items-center justify-between h-full w-full max-w-[1500px] mx-auto relative">
-        {/* Left: Logo */}
         <Link
           to="/"
           onClick={resetFilters}
@@ -232,13 +179,11 @@ export default function Navbar({ onCartClick, onLoginClick, onSignUpClick }) {
           Bite<span className="text-gray-800 dark:text-white">Bud</span>
         </Link>
 
-        {/* <div className="transition-all duration-300 w-70 focus-within:w-100 px-4"> */}
         <div className="absolute left-1/2 transform -translate-x-1/2 transition-all duration-300 w-[280px] focus-within:w-[380px]">
           <div className="relative">
             <span className="material-symbols-rounded absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none">
               search
             </span>
-
             <input
               type="text"
               placeholder="Search restaurants..."
@@ -246,7 +191,6 @@ export default function Navbar({ onCartClick, onLoginClick, onSignUpClick }) {
               onChange={(e) => dispatch(setSearchQuery(e.target.value))}
               className="border border-transparent focus:border-2 placeholder-gray-500 dark:text-white focus:border-yellow-500 outline-none py-3 pl-12 pr-10 w-full rounded-4xl transition-colors duration-300 ease-in bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
             />
-
             {searchQuery && (
               <button
                 onClick={() => dispatch(setSearchQuery(""))}
@@ -263,9 +207,14 @@ export default function Navbar({ onCartClick, onLoginClick, onSignUpClick }) {
           <div className="hidden sm:flex items-center space-x-4 text-gray-900">
             <button
               onClick={onCartClick}
-              className="flex items-center justify-center h-full focus:outline-none hover:text-amber-400 cursor-pointer transition-all duration-200 ease-in dark:text-gray-400 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-amber-400"
+              className="relative flex items-center justify-center h-full focus:outline-none hover:text-amber-400 cursor-pointer transition-all duration-200 ease-in dark:text-gray-400 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-amber-400"
             >
               <span className="material-symbols-rounded">shopping_bag</span>
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-zinc-800 dark:bg-zinc-100 text-white dark:text-black text-xs font-bold h-4 w-4 flex items-center justify-center rounded-full text-center">
+                  {cartCount}
+                </span>
+              )}
             </button>
           </div>
 
@@ -286,80 +235,92 @@ export default function Navbar({ onCartClick, onLoginClick, onSignUpClick }) {
                 </button>
               </>
             ) : (
-              <div className="flex gap-3 relative">
-                <div
-                  ref={profileRef}
-                  onClick={() => setProfileDropdownOpen((prev) => !prev)}
-                  className="relative flex items-center gap-2 mr-2 transition cursor-pointer select-none"
-                >
-                  {user.photoURL ? (
-                    <img
-                      src={user.photoURL}
-                      alt="Avatar"
-                      className="w-8 h-8 rounded-full"
-                    />
-                  ) : (
-                    <span className="material-symbols-rounded text-2xl dark:text-gray-400">
-                      account_circle
-                    </span>
-                  )}
-                  <span className="text-sm text-gray-800 dark:text-gray-200">
-                    Profile
+              <div
+                ref={profileRef}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setProfileDropdownOpen((prev) => !prev);
+                }}
+                className="relative flex items-center gap-2 mr-2 cursor-pointer"
+              >
+                {user.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt="Avatar"
+                    className="w-8 h-8 rounded-full"
+                  />
+                ) : (
+                  <span className="material-symbols-rounded text-2xl dark:text-gray-400">
+                    account_circle
                   </span>
+                )}
+                <span className="text-sm text-gray-800 dark:text-gray-200">
+                  Profile
+                </span>
 
-                  {/* Dropdown */}
-                  <AnimatePresence>
-                    {profileDropdownOpen && (
-                      <motion.div
-                        ref={profileDropdownRef}
-                        initial={{ opacity: 0, y: -5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -5 }}
-                        transition={{ duration: 0.2 }}
-                        className="absolute top-[110%] right-0 mt-2 w-48 bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 rounded-lg z-50"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div className="flex flex-col text-sm text-gray-800 dark:text-gray-100">
-                          <Link
-                            to="/profile"
-                            className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                            onClick={() => setProfileDropdownOpen(false)}
-                          >
-                            My Profile
-                          </Link>
-                          <button
-                            onClick={() => alert("Change language")}
-                            className="px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-                          >
-                            Language: EN
-                          </button>
-                          <button
-                            onClick={handleLogout}
-                            className="px-4 py-2 text-left text-red-500 hover:bg-red-100 dark:hover:bg-red-900 dark:hover:text-white transition"
-                          >
-                            Log Out
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                <AnimatePresence>
+                  {profileDropdownOpen && (
+                    <motion.div
+                      ref={profileDropdownRef}
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -5 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 rounded-lg z-50"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex flex-col text-sm text-gray-800 dark:text-gray-100">
+                        <Link
+                          to="/profile"
+                          className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                          onClick={() => setProfileDropdownOpen(false)}
+                        >
+                          My Profile
+                        </Link>
+                        <button
+                          onClick={() => alert("Change language")}
+                          className="px-4 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                        >
+                          Language: EN
+                        </button>
+                        <button
+                          onClick={handleLogout}
+                          className="px-4 py-2 text-left text-red-500 hover:bg-red-100 dark:hover:bg-red-900 dark:hover:text-white transition"
+                        >
+                          Log Out
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Mobile Dropdown */}
+      {/* Unified Overlay */}
+      {(menuOpen || profileDropdownOpen) && (
+        <div
+          className="fixed inset-0 z-40 bg-transparent"
+          onClick={() => {
+            setMenuOpen(false);
+            setProfileDropdownOpen(false);
+          }}
+        />
+      )}
+
+      {/* Mobile Menu Dropdown */}
       <AnimatePresence>
         {menuOpen && (
           <motion.div
-            ref={dropdownRef}
+            ref={mobileDropdownRef}
             initial={{ opacity: 0, scaleY: 0, transformOrigin: "top" }}
             animate={{ opacity: 1, scaleY: 1 }}
             exit={{ opacity: 0, scaleY: 0, transformOrigin: "top" }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="flex flex-col justify-between h-60 -mx-4 sm:mx-0 mt-4 pb-12 space-y-4 bg-white dark:bg-gray-900 w-screen px-4 origin-top"
+            className="flex flex-col justify-between h-60 -mx-4 sm:mx-0 mt-4 pb-12 space-y-4 bg-white dark:bg-gray-900 w-screen px-4 origin-top z-50"
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="relative w-full">
               <span className="material-symbols-rounded absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500">

@@ -16,16 +16,6 @@ export default function RestaurantMenuPage() {
 
   const restaurant = restaurants.find((r) => r.id === id);
 
-  const {
-    name,
-    bannerImage,
-    logo,
-    menu = [],
-    rating,
-    deliveryTime,
-    hours,
-  } = restaurant;
-
   const handleGoBack = () => {
     navigate(-1);
   };
@@ -50,6 +40,16 @@ export default function RestaurantMenuPage() {
   if (!restaurant)
     return <p className="text-white p-6">Restaurant not found.</p>;
 
+  const {
+    name,
+    bannerImage,
+    logo,
+    menu = {},
+    rating,
+    deliveryTime,
+    hours,
+  } = restaurant;
+
   function isRestaurantOpen(hours) {
     if (!hours || hours.open == null || hours.close == null) return true;
     const currentHour = new Date().getHours();
@@ -58,7 +58,7 @@ export default function RestaurantMenuPage() {
 
   const isOpen = isRestaurantOpen(hours);
 
-  const menuFilteredBySearch = Object.entries(menu || {}).reduce(
+  const menuFilteredBySearch = Object.entries(menu).reduce(
     (acc, [category, items]) => {
       if (!Array.isArray(items)) return acc;
 
@@ -164,7 +164,7 @@ export default function RestaurantMenuPage() {
               {menuSearchQuery && (
                 <button
                   onClick={() => setMenuSearchQuery("")}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-700 focus:outline-none cursor-pointer"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none cursor-pointer flex items-center justify-center"
                   aria-label="Clear search"
                 >
                   <span className="material-symbols-rounded text-xl">

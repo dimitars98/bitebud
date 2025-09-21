@@ -9,25 +9,28 @@ import { CartOpenProvider } from "./contexts/CartOpenContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import AuthListener from "./components/AuthListener";
 import { FilterContextProvider } from "./contexts/FilterContext";
+import { DropdownProvider } from "./contexts/DropdownContext";
 
 const queryClient = new QueryClient();
 
 createRoot(document.getElementById("root")).render(
   <QueryClientProvider client={queryClient}>
     <Provider store={store}>
-      <CartProvider>
-        <CartOpenProvider>
-          <AuthListener>
-            <FilterContextProvider>
-              {/* <AuthProvider> */}
-              {/* <RestaurantProvider> */}
-              <App />
-              {/* </RestaurantProvider> */}
-              {/* </AuthProvider> */}
-            </FilterContextProvider>
-          </AuthListener>
-        </CartOpenProvider>
-      </CartProvider>
+      <DropdownProvider>
+        <CartProvider>
+          <CartOpenProvider>
+            <AuthListener>
+              <FilterContextProvider>
+                {/* <AuthProvider> */}
+                {/* <RestaurantProvider> */}
+                <App />
+                {/* </RestaurantProvider> */}
+                {/* </AuthProvider> */}
+              </FilterContextProvider>
+            </AuthListener>
+          </CartOpenProvider>
+        </CartProvider>
+      </DropdownProvider>
     </Provider>
   </QueryClientProvider>
 );

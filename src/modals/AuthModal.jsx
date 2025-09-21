@@ -164,7 +164,7 @@ export default function AuthModal({
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      if (onSuccess) onSuccess();
+      if (onSuccess) onSuccess({ isSignup: false });
       resetState();
     } catch (err) {
       setError(err.message || "Google login failed.");
@@ -177,7 +177,7 @@ export default function AuthModal({
       const provider = new FacebookAuthProvider();
       provider.addScope("email");
       await signInWithPopup(auth, provider);
-      if (onSuccess) onSuccess();
+      if (onSuccess) onSuccess({ isSignup: false });
       resetState();
     } catch (error) {
       if (error.code === "auth/account-exists-with-different-credential") {
