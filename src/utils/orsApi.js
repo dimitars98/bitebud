@@ -1,4 +1,4 @@
-const ORS_API_KEY = "5b3ce3597851110001cf6248859e098a470845e896bdd3a012310109";
+const ORS_API_KEY = "";
 
 // Calculate distances from user location to restaurant locations
 export async function fetchDistances(userCoords, restaurants) {
