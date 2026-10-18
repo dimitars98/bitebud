@@ -24,6 +24,8 @@ import useUserLocation from "../hooks/useUserLocation";
 import RestaurantSlider from "../components/restaurants/RestaurantSlider";
 import { useTranslation } from "react-i18next";
 import { hasCategory } from "../helpers/hasCategory";
+import SortMenu from "../components/restaurants/SortMenu";
+import { SORT_OPTIONS, sortRestaurants } from "../lib/sortRestaurants";
 
 export default function Home() {
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -42,8 +44,17 @@ export default function Home() {
     setActiveCategory(activeCategory || null);
   }, [activeCategory, setActiveCategory]);
 
+  // Only removes ?category=, so the chosen sort is kept.
   const clearCategoryParam = () => {
-    if (activeCategory) setSearchParams({}, { replace: true });
+    if (!activeCategory) return;
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("category");
+        return next;
+      },
+      { replace: true },
+    );
   };
   const handleShowAll = () => {
     showAll();
@@ -91,8 +102,50 @@ export default function Home() {
     return list;
   }, [restaurants, activeCategory, filters, filtersAreActive]);
 
-  const finalList = baseList.filter((rest) =>
-    rest.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  const finalList = useMemo(
+    () =>
+      baseList.filter((rest) =>
+        rest.name.toLowerCase().includes(searchQuery.toLowerCase()),
+      ),
+    [baseList, searchQuery],
+  );
+
+  // Sorting also lives in the URL (?sort=rating), next to ?category=.
+  // "Nearest" is only offered once we know where the user is.
+  const sortOptions = userLocation
+    ? SORT_OPTIONS
+    : SORT_OPTIONS.filter((option) => option !== "distance");
+  const requestedSort = searchParams.get("sort");
+  const sort = sortOptions.includes(requestedSort) ? requestedSort : "recommended";
+
+  const setSort = (value) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (value === "recommended") next.delete("sort");
+        else next.set("sort", value);
+        return next;
+      },
+      { replace: true },
+    );
+  };
+
+  const distanceById = useMemo(
+    () => new Map(nearbyRestaurants.map((r) => [r.id, r.distance])),
+    [nearbyRestaurants],
+  );
+
+  const sortedList = useMemo(
+    () => sortRestaurants(finalList, sort, distanceById),
+    [finalList, sort, distanceById],
+  );
+  const sortedNearby = useMemo(
+    () => sortRestaurants(nearbyRestaurants, sort, distanceById),
+    [nearbyRestaurants, sort, distanceById],
+  );
+
+  const sortMenu = (
+    <SortMenu value={sort} onChange={setSort} options={sortOptions} />
   );
 
   const skeletonCount = useSkeletonCount();
@@ -147,29 +200,37 @@ export default function Home() {
       {isSearchMode ? (
         // Search / category results
         <div className="max-w-[1500px] mx-auto px-4 md:px-8 py-6">
-          <h1 className="text-2xl font-semibold mb-4">
-            {t("home.searchResults")}
-          </h1>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h1 className="text-2xl font-semibold">
+              {t("home.searchResults")}
+            </h1>
+            {finalList.length > 1 && sortMenu}
+          </div>
 
           {!finalList.length && (
             <p className="text-center">{t("common.noRestaurantsFound")}</p>
           )}
 
           <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-            {finalList.map((rest) => (
+            {sortedList.map((rest) => (
               <RestaurantCard key={rest.id} {...rest} />
             ))}
           </section>
         </div>
       ) : showNearbyOnly || activeCategory || filtersAreActive ? (
         <div className="max-w-[1500px] mx-auto px-4 md:px-8 py-6">
-          <button
-            onClick={handleShowAll}
-            aria-label={t("home.backToAll")}
-            className="mb-10 flex items-center gap-2 text-sm bg-(--bg-secondary) dark:bg-(--brand-bg-secondary) p-3 rounded-full hover:scale-105 transition-transform text-gray-700 dark:text-(--text-primary)"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+          {/* Back on the left, sort on the right */}
+          <div className="mb-10 flex items-center justify-between gap-3">
+            <button
+              onClick={handleShowAll}
+              aria-label={t("home.backToAll")}
+              className="flex items-center gap-2 text-sm bg-(--bg-secondary) dark:bg-(--brand-bg-secondary) p-3 rounded-full hover:scale-105 transition-transform text-gray-700 dark:text-(--text-primary)"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            {(showNearbyOnly ? nearbyRestaurants : finalList).length > 1 &&
+              sortMenu}
+          </div>
 
           <div className="flex items-center mb-4">
             <h1 className="text-2xl font-semibold ml-4">
@@ -187,11 +248,9 @@ export default function Home() {
           {/* 🟢 RESULTS */}
           {finalList.length > 0 && (
             <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-              {showNearbyOnly
-                ? nearbyRestaurants.map((r) => (
-                    <RestaurantCard key={r.id} {...r} />
-                  ))
-                : finalList.map((r) => <RestaurantCard key={r.id} {...r} />)}
+              {(showNearbyOnly ? sortedNearby : sortedList).map((r) => (
+                <RestaurantCard key={r.id} {...r} />
+              ))}
             </section>
           )}
         </div>
@@ -210,11 +269,14 @@ export default function Home() {
           <div className="max-w-[1500px] px-4 mx-auto md:px-8">
             {finalList.length > 0 && (
               <>
-                <h1 className="text-2xl font-extrabold text-(--text-primary) dark:text-(--text-primary) mb-4">
-                  {t("home.allRestaurants")}
-                </h1>
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <h1 className="text-2xl font-extrabold text-(--text-primary) dark:text-(--text-primary)">
+                    {t("home.allRestaurants")}
+                  </h1>
+                  {finalList.length > 1 && sortMenu}
+                </div>
                 <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 mb-10">
-                  {finalList.map((rest) => (
+                  {sortedList.map((rest) => (
                     <RestaurantCard key={rest.id} {...rest} />
                   ))}
                 </section>

@@ -87,6 +87,12 @@
     "heading": "Categories",
     "scrollLeft": "Scroll left",
     "scrollRight": "Scroll right",
+    "subtitle": "Pick a cuisine to filter restaurants",
+    "all": "All",
+    "places_one": "{{count}} place",
+    "places_other": "{{count}} places",
+    "noneYet": "None yet",
+    "clearFilter": "Clear the {{name}} filter",
     "names": {
       "Pizza": "Pizza",
       "Burger": "Burger",
@@ -210,6 +216,17 @@
     "offersNearYou": "Offers near you",
     "allRestaurants": "All restaurants",
     "noneToDisplay": "No restaurants to display."
+  },
+  "sort": {
+    "label": "Sort",
+    "ariaLabel": "Sort restaurants, currently {{option}}",
+    "options": {
+      "recommended": "Recommended",
+      "rating": "Top rated",
+      "deliveryTime": "Fastest delivery",
+      "distance": "Nearest",
+      "name": "Name (A–Z)"
+    }
   },
   "topPicks": {
     "title": "Top Picks For You",

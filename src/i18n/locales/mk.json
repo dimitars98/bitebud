@@ -87,6 +87,12 @@
     "heading": "Категории",
     "scrollLeft": "Лизгај лево",
     "scrollRight": "Лизгај десно",
+    "subtitle": "Избери кујна за да ги филтрираш рестораните",
+    "all": "Сите",
+    "places_one": "{{count}} место",
+    "places_other": "{{count}} места",
+    "noneYet": "Сè уште нема",
+    "clearFilter": "Отстрани го филтерот {{name}}",
     "names": {
       "Pizza": "Пица",
       "Burger": "Бургер",
@@ -210,6 +216,17 @@
     "offersNearYou": "Понуди во ваша близина",
     "allRestaurants": "Сите ресторани",
     "noneToDisplay": "Нема ресторани за прикажување."
+  },
+  "sort": {
+    "label": "Подреди",
+    "ariaLabel": "Подреди ги рестораните, моментално {{option}}",
+    "options": {
+      "recommended": "Препорачано",
+      "rating": "Најдобро оценети",
+      "deliveryTime": "Најбрза достава",
+      "distance": "Најблиску",
+      "name": "Име (А–Ш)"
+    }
   },
   "topPicks": {
     "title": "Најдобри предлози за вас",
