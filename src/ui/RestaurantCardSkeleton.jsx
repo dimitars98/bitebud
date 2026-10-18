@@ -1,9 +1,9 @@
-import { CARD_WIDTH, IMAGE_HEIGHT } from "../helpers/sizes";
+import { CARD_WIDTH, IMAGE_HEIGHT } from "../constants/sizes";
 
 export default function RestaurantCardSkeleton() {
   return (
     <div
-      className={`w-full sm:w-80 bg-gray-800 rounded-2xl shadow-md overflow-hidden relative shimmer-wrapper ${CARD_WIDTH}`}
+      className={`bg-gray-800 rounded-2xl shadow-md overflow-hidden relative shimmer-wrapper ${CARD_WIDTH}`}
     >
       <div
         className={`rounded-t-2xl bg-gray-700 ${IMAGE_HEIGHT} shimmer`}

@@ -1,12 +1,18 @@
-export default function LoadingSpinner() {
+import { useTranslation } from "react-i18next";
+
+export default function LoadingSpinner({ className }) {
+  const { t } = useTranslation();
   return (
-    <div className="flex justify-center items-center min-h-screen">
+    <div
+      className={`flex justify-center items-center py-10 ${className || ""}`}
+    >
       <svg
         className="animate-spin h-10 w-10 text-yellow-500"
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
         viewBox="0 0 24 24"
-        aria-label="Loading spinner"
+        role="status"
+        aria-label={t("common.loading")}
       >
         <circle
           className="opacity-25"

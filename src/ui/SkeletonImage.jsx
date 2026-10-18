@@ -1,4 +1,3 @@
-// src/ui/SkeletonImage.jsx
 import { useState } from "react";
 
 export default function SkeletonImage({

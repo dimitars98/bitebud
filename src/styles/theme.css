@@ -1,0 +1,70 @@
+/* ---------------------- */
+/*      LIGHT THEME       */
+/* ---------------------- */
+:root {
+  --bg-main: #f8f9fa; /* bg-white */
+  --bg-page: #ffffff; /* same as main, adjust if needed */
+  --bg-primary: #f9fafb;
+  --bg-secondary: #f3f4f6; /* bg-gray-100 */
+  --bg-secondary-hover: #e5e7eb; /* bg-gray-200 */
+  --restaurant-card-bg: #0f172b; /* slate-900 */
+
+  --bg-dark-card: #1f2937; /* gray-700 equivalent for light mode (rarely used, safe fallback) */
+  --btn-bg-hover: #f9fafb;
+
+  /* BORDER */
+  --border-primary: #e5e7eb; /* gray-200 */
+
+  /* BADGE / UI */
+  --badge-bg: #18181b; /* zinc-800 */
+  --icon-muted: #9ca3af; /* gray-400 */
+
+  /* BRAND / ACCENTS */
+  --brand: #f59e0b; /*amber-500*/
+  --brand-primary: #fbbf24; /* amber-400 */
+  --brand-hover: #d97706; /* amber-600 */
+  --brand-soft: #fef3c7; /* amber-100 */
+  --brand-soft-secondary: #fee685; /* amber-100 */
+  --brand-glow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+
+  --text-primary: #111827; /* text-gray-900 */
+  --text-secondary: #1f2937;
+  --text-muted: #6b7280;
+}
+
+/* ---------------------- */
+/*       DARK THEME       */
+/* ---------------------- */
+.dark {
+  --bg-main: #0a0a0a; /* bg-black */
+  --bg-page: #0a0a0a;
+
+  /* BORDER */
+  --border-primary: #1f2937; /* gray-800 */
+  --border-secondary: #334155; /* slate-700 */
+
+  --brand-bg-primary: #0f172b; /* slate-900 */
+  --brand-bg-secondary: #1e293b; /* slate-800 */
+  --brand-bg-secondary-hover: #334155; /* slate-700 */
+
+  --btn-bg-hover: #f9fafb;
+
+  --brand: #f59e0b; /*amber-500*/
+  --brand-primary: #fbbf24; /* amber-400 */
+  --brand-hover: #d97706; /* amber-600 */
+  --brand-soft: #78350f; /* darker warm tone */
+  --brand-glow: 0 0 0 3px rgba(245, 158, 11, 0.3);
+
+  /* BADGE / UI */
+  --badge-bg: #f4f4f5; /* zinc-100 */
+  --icon-muted: #6b7280; /* gray-500 */
+
+  /*FORM*/
+  --text-form-secondary: #e2e8f0;
+  --text-form-primary: #f1f5f9;
+  --border-form: #314158;
+
+  --text-primary: #f9fafb; /* text-gray-50 / gray-100 */
+  --text-secondary: #f3f4f6;
+  --text-muted: #9ca3af;
+}

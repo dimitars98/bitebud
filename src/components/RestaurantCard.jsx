@@ -1,116 +1,164 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { CARD_WIDTH, IMAGE_HEIGHT } from "../helpers/sizes";
+import { isRestaurantOpen } from "../lib/isRestaurantOpen";
+import { CARD_WIDTH, IMAGE_HEIGHT } from "../constants/sizes";
+import { formatHour } from "../lib/formatHour";
+import { useTranslation } from "react-i18next";
 
+// Free delivery is the only bright tag, so it can never be mistaken for "Closed".
 const TAG_STYLES = {
-  Vegan: "bg-green-600 text-white",
-  Vegetarian: "bg-amber-500 text-white",
-  "Free delivery": "bg-red-500 text-white",
+  "Free delivery": {
+    icon: "local_shipping",
+    className: "bg-(--brand-primary) text-(--restaurant-card-bg)",
+  },
+  Vegetarian: {
+    icon: "eco",
+    className: "bg-(--restaurant-card-bg)/85 text-lime-200 backdrop-blur-sm",
+  },
+  Vegan: {
+    icon: "eco",
+    className: "bg-(--restaurant-card-bg)/85 text-green-300 backdrop-blur-sm",
+  },
 };
 
-function isOpenNow(hours) {
-  if (!hours || hours.open == null || hours.close == null) return true;
-  const currentHour = new Date().getHours();
-  return currentHour >= hours.open && currentHour < hours.close;
+function formatDistance(distance) {
+  if (distance === undefined || distance === null) return null;
+  if (distance < 1) return `${Math.round(distance * 1000)} m`;
+  return `${distance.toFixed(1)} km`;
 }
 
 export default function RestaurantCard({
-  id,
+  slug,
   name,
   rating,
-  image,
+  logo,
   deliveryTime,
   distance,
+  cuisine,
   tags = [],
   hours,
+  className = "",
 }) {
   const [imgLoaded, setImgLoaded] = useState(false);
-  const open = isOpenNow(hours);
+  const { t } = useTranslation();
 
-  function formatDistance(distance) {
-    if (distance === undefined || distance === null) return "Distance unknown";
-    if (distance < 1) {
-      return `${Math.round(distance * 1000)} m`;
-    }
-    return `${distance.toFixed(1)} km`;
-  }
+  // Same rule as the hero board. Restaurants without hours are treated as open,
+  // as the card did before (the helper itself returns false for missing hours).
+  const hasHours =
+    typeof hours?.open === "number" && typeof hours?.close === "number";
+  const open = hasHours ? isRestaurantOpen(hours) : true;
+
+  const distanceLabel = formatDistance(distance);
+  const meta = [cuisine, distanceLabel].filter(Boolean).join(" · ");
+  const knownTags = (tags ?? []).filter((tag) => TAG_STYLES[tag]);
 
   return (
     <Link
-      to={`/restaurant/${id}`}
-      state={{ name, rating, image, deliveryTime }}
-      aria-label={`View details for ${name}`}
-      className={`block rounded-2xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-400 transition-shadow duration-300`}
+      to={`/restaurant/${slug}`}
+      state={{ name, rating, logo, deliveryTime }}
+      aria-label={open ? name : t("card.closedAria", { name })}
+      className={`group block rounded-2xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-(--brand) ${CARD_WIDTH} ${className}`}
     >
-      <div
-        className={`bg-gray-900 shadow-md rounded-2xl overflow-hidden hover:shadow-xl hover:-translate-y-1 transform transition cursor-pointer duration-300 ease ${CARD_WIDTH} `}
-      >
-        <div className="overflow-hidden rounded-t-2xl relative">
-          {/* <div className="absolute top-2 left-2 bg-green-600 text-white text-xs px-2 py-1 rounded-full z-30">
-            Vegan
-          </div>
-          <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full z-30">
-            Free Delivery
-          </div> */}
-          {open &&
-            tags?.map((tag, index) => (
-              <div
-                key={index}
-                className={`absolute left-2 px-2 py-1 text-xs rounded-full font-medium shadow-md z-30 ${TAG_STYLES[tag]}`}
-                style={{ top: `${0.5 + index * 1.8}rem` }}
-              >
-                {tag}
-              </div>
-            ))}
+      <article className="flex flex-col h-full overflow-hidden rounded-2xl bg-(--restaurant-card-bg) shadow-md dark:ring-1 dark:ring-white/5 transition duration-300 group-hover:-translate-y-1 group-hover:shadow-xl">
+        {/* Photo */}
+        <div
+          className={`relative overflow-hidden bg-(--brand-bg-secondary,#1e293b) ${IMAGE_HEIGHT}`}
+        >
           {!imgLoaded && (
-            <div
-              className={`absolute top-0 left-0 w-full ${IMAGE_HEIGHT} bg-gray-700 animate-pulse z-10`}
-            />
+            <div className="absolute inset-0 animate-pulse bg-(--brand-bg-secondary-hover,#334155)" />
           )}
           <img
-            src={image}
-            alt={name}
-            onLoad={() => setImgLoaded(true)}
-            className={`${IMAGE_HEIGHT} w-full object-cover transform transition-transform duration-300 hover:scale-110 will-change-transform transform-gpu z-20 ${
-              imgLoaded ? "opacity-100" : "opacity-0"
-            } ${!open ? "opacity-70 grayscale" : ""}`}
+            src={logo}
+            alt=""
             loading="lazy"
+            onLoad={() => setImgLoaded(true)}
+            className={`h-full w-full object-cover transition duration-500 will-change-transform ${
+              !imgLoaded
+                ? "opacity-0"
+                : open
+                  ? "opacity-100 group-hover:scale-105"
+                  : "opacity-55 grayscale"
+            }`}
           />
-          {/* Overlay when closed */}
-          {/* {!open && (
-            <div className="absolute inset-0 flex items-center justify-center  rounded-2xl pointer-events-none z-50">
-              <div className="text-white text-lg font-semibold">
-                🕒 Closed now
-              </div>
-            </div>
-          )} */}
-        </div>
-        <div className="flex flex-col gap-2 px-4 py-3">
-          <div className="flex items-center gap-3">
-            <h3 className="text-white text-xl font-semibold">{name}</h3>
-          </div>
-          <div className="text-sm text-gray-400">
-            <span
-              className={rating > 4.5 ? "text-yellow-400" : "text-gray-400"}
-            >
-              ★
-            </span>
-            {rating} · {deliveryTime} mins · {formatDistance(distance)} away{" "}
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-300">
-              {open ? "" : `Opens: ${hours.open}:00`}
-            </span>
-            {!open && (
-              <div
-                className={`px-2 py-1 text-xs rounded-full font-medium shadow-md z-30 bg-red-500 text-white`}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-(--restaurant-card-bg)/70 to-transparent"
+          />
+
+          {open ? (
+            <>
+              {deliveryTime != null && (
+                <span className="absolute right-2.5 top-2.5 flex min-w-[46px] flex-col items-center rounded-[10px] bg-(--restaurant-card-bg) px-2 pb-1 pt-1.5 shadow-lg">
+                  <span className="text-xl font-black leading-none text-(--brand-primary)">
+                    {deliveryTime}
+                  </span>
+                  <span className="mt-0.5 text-[9px] font-extrabold tracking-[0.16em] text-slate-400">
+                    {t("card.minShort")}
+                  </span>
+                </span>
+              )}
+              {knownTags.length > 0 && (
+                <span className="absolute bottom-2.5 left-2.5 right-2.5 flex flex-wrap gap-1.5">
+                  {knownTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className={`flex items-center gap-1 rounded-full py-1 pl-1.5 pr-2.5 text-xs font-extrabold ${TAG_STYLES[tag].className}`}
+                    >
+                      <span
+                        className="material-symbols-rounded text-sm! leading-none"
+                        aria-hidden="true"
+                      >
+                        {TAG_STYLES[tag].icon}
+                      </span>
+                      {t(`tags.${tag}`, { defaultValue: tag })}
+                    </span>
+                  ))}
+                </span>
+              )}
+            </>
+          ) : (
+            <span className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-(--restaurant-card-bg)/90 px-3.5 py-2.5 text-[13px] font-extrabold text-slate-200">
+              <span
+                className="material-symbols-rounded text-lg! leading-none text-slate-400"
+                aria-hidden="true"
               >
-                Closed
-              </div>
+                schedule
+              </span>
+              {formatHour(hours?.open)
+                ? t("card.closedOpens", { time: formatHour(hours.open) })
+                : t("common.closed")}
+            </span>
+          )}
+        </div>
+
+        {/* Details */}
+        <div
+          className={`flex flex-col gap-1 px-4 pb-4 pt-3 ${open ? "" : "opacity-60"}`}
+        >
+          <div className="flex items-center justify-between gap-2.5">
+            <h3 className="min-w-0 truncate text-lg font-extrabold text-white">
+              {name}
+            </h3>
+            {rating != null && (
+              <span className="flex shrink-0 items-center gap-0.5 rounded-lg bg-(--brand-bg-secondary,#1e293b) px-2 py-0.5 text-[13px] font-extrabold text-slate-100">
+                <span
+                  className={
+                    rating >= 4.5 ? "text-(--brand-primary)" : "text-slate-400"
+                  }
+                  aria-hidden="true"
+                >
+                  ★
+                </span>
+                <span className="sr-only">{t("card.rated")} </span>
+                {rating}
+              </span>
             )}
           </div>
+          {meta && (
+            <p className="m-0 text-sm font-semibold text-slate-400">{meta}</p>
+          )}
         </div>
-      </div>
+      </article>
     </Link>
   );
 }

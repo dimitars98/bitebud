@@ -15,6 +15,7 @@ const authSlice = createSlice({
         email: action.payload.email,
         displayName: action.payload.displayName || null,
         photoURL: action.payload.photoURL || null,
+        role: action.payload.role || null,
       };
       state.loading = false;
     },

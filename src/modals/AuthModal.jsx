@@ -7,33 +7,37 @@ import {
   FacebookAuthProvider,
   linkWithCredential,
   fetchSignInMethodsForEmail,
-  sendPasswordResetEmail,
   sendEmailVerification,
 } from "firebase/auth";
 import { auth, db } from "../firebase/firebase";
 import toast from "react-hot-toast";
 import { useForm } from "react-hook-form";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import FormInput from "../components/FormInput";
+import { useNavigate } from "react-router-dom";
+import { fetchUserWithRole } from "../services/fetchUserWithRole";
+import { useDispatch } from "react-redux";
+import { useAuthIntent } from "../contexts/AuthIntentContext";
+import { Trans, useTranslation } from "react-i18next";
+import { authErrorMessage } from "../i18n/authError";
 
 export default function AuthModal({
   initialMode = "login",
   onSuccess,
   onClose,
 }) {
-  const [mode, setMode] = useState(initialMode);
-  const [step, setStep] = useState("email");
+  const [mode, setMode] = useState(initialMode); // "login" or "signup"
+  const [step, setStep] = useState(
+    mode === "login" ? "loginEmail" : "signupStart",
+  );
   const [email, setEmail] = useState("");
-  const [keepLoggedIn, setKeepLoggedIn] = useState(true);
-  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const resetState = () => {
-    setStep("email");
-    setEmail("");
-    setPassword("");
-    setError("");
-    setIsLoading(false);
-  };
+  const { authIntent, setAuthIntent } = useAuthIntent();
+
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { t } = useTranslation();
 
   const {
     register,
@@ -42,372 +46,350 @@ export default function AuthModal({
     formState: { errors },
   } = useForm();
 
-  const onSubmit = async (data) => {
-    const { email: submittedEmail, password: submittedPassword } = data;
-
-    if (step === "email") {
-      setIsLoading(true);
-      try {
-        if (mode === "login") {
-          console.log("Login mode: Directly proceeding to password step.");
-        } else {
-          // mode === "signup"
-          const methods = await fetchSignInMethodsForEmail(
-            auth,
-            submittedEmail
-          );
-
-          if (methods.length > 0) {
-            setError("email", {
-              type: "manual",
-              message:
-                "An account with this email already exists. Please log in instead.",
-            });
-            console.log("Error: Account already exists for signup.");
-            setIsLoading(false);
-            return;
-          }
-          console.log(
-            "Proceeding to password step for new email/password signup."
-          );
-        }
-
-        setEmail(submittedEmail);
-        setStep("password");
-      } catch (err) {
-        console.error("Error checking email (during signup flow):", err);
-        setError("email", {
-          type: "manual",
-          message: "Something went wrong. Please try again.",
-        });
-        toast.error(
-          "Error checking email: " + (err.message || "Unknown error.")
-        );
-      } finally {
-        setIsLoading(false);
-      }
-      return;
-    }
-
-    if (step === "password") {
-      setIsLoading(true);
-      try {
-        if (mode === "login") {
-          await signInWithEmailAndPassword(auth, email, submittedPassword);
-        } else {
-          const userCredential = await createUserWithEmailAndPassword(
-            auth,
-            email,
-            submittedPassword
-          );
-          const user = userCredential.user;
-
-          await setDoc(doc(db, "users", user.uid), {
-            email: user.email,
-            createdAt: new Date(),
-          });
-
-          await sendEmailVerification(user);
-        }
-        if (onSuccess) onSuccess({ isSignup: mode === "signup" });
-      } catch (err) {
-        let message = "Login failed.";
-
-        switch (err.code) {
-          case "auth/wrong-password":
-            message = "Incorrect password.";
-            break;
-          case "auth/invalid-email":
-            message = "Invalid email format.";
-            break;
-          case "auth/invalid-credential":
-            message = "Invalid credentials.";
-            break;
-          default:
-            message = err.message || "An unknown error occurred.";
-        }
-
-        setError("password", {
-          type: "manual",
-          message,
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  };
-
-  const handlePasswordReset = async (e) => {
-    e.preventDefault();
+  const resetState = (newMode = mode) => {
+    setMode(newMode);
+    setStep(newMode === "login" ? "loginEmail" : "signupStart");
+    setEmail("");
     setError("");
-    if (!email) {
-      setError("Please enter your email.");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      await sendPasswordResetEmail(auth, email);
-      setStep("email");
-      setError("");
-      // alert("Password reset email sent. Please check your inbox.");
-      toast.success("Password reset email sent. Please check your inbox.");
-    } catch (err) {
-      setError(err.message || "Failed to send password reset email.");
-    } finally {
-      setIsLoading(false);
-    }
+    setIsLoading(false);
   };
 
-  // Google login handler - same for login & signup
+  // Social sign-ins don't go through the sign-up form, so make sure the user
+  // has a users/ document the first time.
+  async function ensureCustomerDoc(user) {
+    const docRef = doc(db, "users", user.uid);
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) {
+      await setDoc(docRef, {
+        uid: user.uid,
+        email: user.email,
+        createdAt: serverTimestamp(),
+        role: "customer",
+      });
+    }
+  }
+
+  // After any successful sign-in: put the user (and role) in Redux, tell the
+  // parent, then continue to checkout if that's why they signed in, otherwise
+  // to Explore.
+  async function finishLogin({ isSignup }) {
+    await fetchUserWithRole(dispatch);
+    onSuccess?.({ isSignup });
+    if (authIntent === "checkout") {
+      setAuthIntent(null);
+      navigate("checkout");
+    } else {
+      navigate("explore");
+    }
+    resetState();
+  }
+
+  // --- Social login handlers (shared for both login/signup)
   const handleGoogleLogin = async () => {
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      if (onSuccess) onSuccess({ isSignup: false });
-      resetState();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      await ensureCustomerDoc(user);
+      await finishLogin({ isSignup: mode === "signup" });
     } catch (err) {
-      setError(err.message || "Google login failed.");
+      setError(authErrorMessage(t, err, "auth.googleFailed"));
     }
   };
 
-  // Facebook login with account linking logic
   const handleFacebookLogin = async () => {
     try {
       const provider = new FacebookAuthProvider();
       provider.addScope("email");
-      await signInWithPopup(auth, provider);
-      if (onSuccess) onSuccess({ isSignup: false });
-      resetState();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      await ensureCustomerDoc(user);
+      await finishLogin({ isSignup: mode === "signup" });
     } catch (error) {
       if (error.code === "auth/account-exists-with-different-credential") {
         const fbEmail = error.customData.email;
         const pendingCred = FacebookAuthProvider.credentialFromError(error);
-
         try {
           const methods = await fetchSignInMethodsForEmail(auth, fbEmail);
-
           if (methods.includes("google.com")) {
             const googleProvider = new GoogleAuthProvider();
             const result = await signInWithPopup(auth, googleProvider);
-
             await linkWithCredential(result.user, pendingCred);
-
-            if (onSuccess) onSuccess();
-            resetState();
+            await finishLogin({ isSignup: mode === "signup" });
           } else {
             setError(
-              `An account already exists with a different provider: ${methods[0]}. Please use that to log in.`
+              t("auth.otherProvider", { provider: methods[0] }),
             );
           }
         } catch (linkError) {
           console.error("Error linking Facebook to Google account:", linkError);
-          setError("Could not link Facebook to existing account.");
+          setError(t("auth.linkFailed"));
         }
       } else {
-        setError(error.message || "Facebook login failed.");
+        setError(authErrorMessage(t, error, "auth.facebookFailed"));
+      }
+    }
+  };
+
+  // --- Form submission handler
+  const onSubmit = async (data) => {
+    if (mode === "login") {
+      // --- Login flow
+      if (step === "loginEmail") {
+        setEmail(data.email);
+        setStep("loginPassword");
+        return;
+      }
+
+      if (step === "loginPassword") {
+        setIsLoading(true);
+        try {
+          // inside login password branch (after signInWithEmailAndPassword & fetchUserWithRole)
+          await signInWithEmailAndPassword(auth, email, data.password);
+          await finishLogin({ isSignup: false });
+        } catch (err) {
+          setError("password", {
+            type: "manual",
+            message: authErrorMessage(t, err, "auth.loginFailed"),
+          });
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+    }
+
+    if (mode === "signup") {
+      // --- Signup flow
+      if (step === "signupForm") {
+        const { email: signupEmail, password, repeatPassword } = data;
+
+        if (password !== repeatPassword) {
+          setError("repeatPassword", {
+            type: "manual",
+            message: t("auth.passwordsMismatch"),
+          });
+          return;
+        }
+
+        setIsLoading(true);
+        try {
+          const methods = await fetchSignInMethodsForEmail(auth, signupEmail);
+          if (methods.length > 0) {
+            setError("email", {
+              type: "manual",
+              message: t("authErrors.email-already-in-use"),
+            });
+            setIsLoading(false);
+            return;
+          }
+
+          const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            signupEmail,
+            password,
+          );
+          const user = userCredential.user;
+
+          await setDoc(doc(db, "users", user.uid), {
+            uid: user.uid,
+            email: user.email,
+            createdAt: new Date(),
+            role: "customer",
+          });
+
+          // inside signup success branch (after createUserWithEmailAndPassword, setDoc, fetchUserWithRole)
+          await sendEmailVerification(user);
+          toast.success(t("auth.accountCreated"));
+          await finishLogin({ isSignup: true });
+        } catch (err) {
+          setError("email", {
+            type: "manual",
+            message: authErrorMessage(t, err, "auth.signupFailed"),
+          });
+        } finally {
+          setIsLoading(false);
+        }
       }
     }
   };
 
   return (
-    <div className="space-y-6 dark:bg-[var(--color-grey-800)] p-6 rounded-lg max-w-md mx-auto">
+    <div className="space-y-6 mb-4 dark:bg-neutral-950 md:p-6 rounded-lg max-w-md mx-auto">
       <h2 className="text-xl font-semibold text-center dark:text-gray-100">
-        {mode === "login" ? "Welcome Back" : "Create an Account"}
+        {mode === "login" ? t("auth.welcomeBack") : t("auth.createAccount")}
       </h2>
 
-      {/* Social Login Buttons - show only on email step */}
-      {step === "email" && (
+      {/* --- Social Buttons for both login and signupStart --- */}
+      {(step === "loginEmail" || step === "signupStart") && (
         <div className="flex flex-col gap-3">
           <button
             onClick={handleGoogleLogin}
-            className="w-full relative flex items-center justify-center focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-amber-400 text-white bg-black rounded-lg py-4 hover:bg-[#111] outline-none cursor-pointer"
+            className="w-full relative flex items-center justify-center text-white bg-black rounded-lg py-4 hover:bg-[#111]"
           >
             <img
               src="https://www.svgrepo.com/show/475656/google-color.svg"
               alt="Google"
               className="w-5 h-5 absolute left-3"
             />
-            Continue with Google
+            {t("auth.google")}
           </button>
-
           <button
             onClick={handleFacebookLogin}
-            className="w-full relative focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-amber-400 text-white rounded-lg py-4  bg-[var(--color-facebook)] hover:bg-[var(--color-facebook-hover)] flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full relative text-white rounded-lg py-4 bg-[var(--color-facebook)] hover:bg-[var(--color-facebook-hover)] flex items-center justify-center gap-2"
           >
             <img
               src="/Facebook_Logo_Secondary.png"
               alt="Facebook"
               className="w-5 h-5 absolute left-3"
             />
-            Continue with Facebook
+            {t("auth.facebook")}
           </button>
         </div>
       )}
 
-      {/* Divider – only show at email step */}
-      {step === "email" && (
+      {/* --- Divider --- */}
+      {(step === "loginEmail" || step === "signupStart") && (
         <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mt-4">
           <span className="h-px w-10 sm:w-20 bg-gray-400"></span>
           <span className="whitespace-nowrap text-gray-400">
-            or continue with email
+            {mode === "login" ? t("auth.orEmail") : t("auth.or")}
           </span>
           <span className="h-px w-10 sm:w-20 bg-gray-400"></span>
         </div>
       )}
 
-      {/* Email or Password Step */}
-      {step === "email" && (
+      {/* --- Login Email Form --- */}
+      {mode === "login" && step === "loginEmail" && (
         <form
           onSubmit={handleSubmit(onSubmit)}
           className="flex flex-col gap-4 mt-4"
         >
-          <input
+          <FormInput
             type="email"
-            placeholder="Enter your email"
-            className="border border-gray-400 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-amber-400 placeholder:text-gray-400 caret-gray-400 rounded-lg p-4 w-full"
-            {...register("email", { required: "Email is required" })}
+            placeholder={t("auth.emailPh")}
+            {...register("email", { required: t("auth.emailRequired") })}
+            error={errors.email?.message}
           />
-          {errors.email && (
-            <p className="text-red-500 text-xs">{errors.email.message}</p>
-          )}
           <button
             type="submit"
-            className="bg-yellow-500 text-white focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-amber-400 py-4 rounded-lg hover:bg-yellow-600 cursor-pointer"
+            className="bg-yellow-500 text-white py-4 rounded-lg w-full hover:bg-yellow-600"
           >
-            Continue
+            {t("auth.continue")}
           </button>
         </form>
       )}
 
-      {step === "password" && (
+      {/* --- Login Password Form --- */}
+      {mode === "login" && step === "loginPassword" && (
         <form
           onSubmit={handleSubmit(onSubmit)}
           className="flex flex-col gap-4 mt-4"
         >
           <p className="text-sm text-gray-400">
-            {mode === "login" ? "Logging in" : "Signing up"} as{" "}
-            <strong>{email}</strong>
-          </p>
-
-          <input
-            type="password"
-            placeholder="Enter your password"
-            className="border p-2 rounded w-full dark:placeholder:text-gray-400"
-            {...register("password", { required: "Password is required" })}
-          />
-          {errors.password && (
-            <p className="text-red-500 text-xs">{errors.password.message}</p>
-          )}
-          <button
-            type="button"
-            onClick={() => setStep("forgot")}
-            className="text-sm text-blue-500 underline self-start hover:text-blue-600"
-          >
-            Forgot Password?
-          </button>
-
-          <label className="text-sm flex items-center gap-2 text-gray-400">
-            <input
-              type="checkbox"
-              checked={keepLoggedIn}
-              onChange={() => setKeepLoggedIn((prev) => !prev)}
-              className="accent-yellow-500"
+            <Trans
+              i18nKey="auth.loggingInAs"
+              values={{ email }}
+              components={{ strong: <strong /> }}
             />
-            Keep me logged in
-          </label>
-
+          </p>
+          <FormInput
+            type="password"
+            placeholder={t("auth.passwordPh")}
+            {...register("password", { required: t("auth.passwordRequired") })}
+            error={errors.password?.message}
+          />
           <button
             type="submit"
-            className="bg-yellow-500 text-white py-2 rounded hover:bg-yellow-600"
-            disabled={isLoading}
+            className="bg-yellow-500 text-white py-4 rounded-lg w-full hover:bg-yellow-600"
           >
-            {isLoading
-              ? mode === "login"
-                ? "Logging in..."
-                : "Signing up..."
-              : mode === "login"
-              ? "Login"
-              : "Sign Up"}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setStep("email")}
-            className="text-sm dark:text-gray-100 text-gray-500 underline dark:hover:text-gray-200 hover:text-gray-700 cursor-pointer"
-          >
-            ← Go back
+            {t("auth.login")}
           </button>
         </form>
       )}
 
-      {step === "forgot" && (
+      {/* --- Signup Continue Button --- */}
+      {mode === "signup" && step === "signupStart" && (
+        <div className="mt-4 flex justify-center">
+          <button
+            className="bg-yellow-500 text-white py-4 rounded-lg w-full hover:bg-yellow-600"
+            onClick={() => setStep("signupForm")}
+          >
+            {t("auth.continueEmail")}
+          </button>
+        </div>
+      )}
+
+      {/* --- Signup Form --- */}
+      {mode === "signup" && step === "signupForm" && (
         <form
-          onSubmit={handlePasswordReset}
+          onSubmit={handleSubmit(onSubmit)}
           className="flex flex-col gap-4 mt-4"
         >
-          <input
+          <FormInput
             type="email"
-            placeholder="Enter your email"
-            className="border border-gray-400 placeholder:text-gray-400 caret-gray-400 rounded-lg p-4 w-full"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
+            placeholder={t("auth.email")}
+            {...register("email", { required: t("auth.emailRequired") })}
+            error={errors.email?.message}
+          />
+          <FormInput
+            type="password"
+            placeholder={t("auth.password")}
+            {...register("password", { required: t("auth.passwordRequired") })}
+            error={errors.password?.message}
+          />
+          <FormInput
+            type="password"
+            placeholder={t("auth.repeatPassword")}
+            {...register("repeatPassword", {
+              required: t("auth.repeatRequired"),
+            })}
+            error={errors.repeatPassword?.message}
           />
           <button
             type="submit"
-            className="bg-yellow-500 text-white py-4 rounded-lg hover:bg-yellow-600 cursor-pointer"
+            className="bg-yellow-500 text-white py-4 rounded-lg w-full hover:bg-yellow-600"
             disabled={isLoading}
           >
-            {isLoading ? "Sending..." : "Send Reset Email"}
+            {isLoading ? t("auth.signingUp") : t("auth.signUp")}
           </button>
+
           <button
             type="button"
-            onClick={() => setStep("email")}
-            className="text-sm text-gray-500 underline hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100"
+            onClick={() => setStep("signupStart")}
+            className="text-sm text-gray-400 hover:text-gray-500 mt-2"
           >
-            ← Back to login
+            {t("auth.goBack")}
           </button>
         </form>
       )}
 
-      {/* Switch Mode Link */}
+      {/* --- Switch Mode Link --- */}
       <p className="text-center text-gray-400 text-sm mt-4">
         {mode === "login" ? (
           <>
-            Don&apos;t have an account?{" "}
+            {t("auth.noAccount")}{" "}
             <button
-              onClick={() => {
-                resetState();
-                setMode("signup");
-              }}
-              className="underline cursor-pointer focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-amber-400 text-yellow-400 hover:text-yellow-500"
+              onClick={() => resetState("signup")}
+              className="cursor-pointer text-yellow-400 hover:text-yellow-500"
             >
-              Sign up
+              {t("auth.signUpLink")}
             </button>
           </>
         ) : (
           <>
-            Already have an account?{" "}
+            {t("auth.haveAccount")}{" "}
             <button
-              onClick={() => {
-                resetState();
-                setMode("login");
-              }}
-              className="underline cursor-pointer focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-amber-400 text-yellow-400 hover:text-yellow-500"
+              onClick={() => resetState("login")}
+              className="cursor-pointer text-yellow-400 hover:text-yellow-500"
             >
-              Log in
+              {t("auth.logInLink")}
             </button>
           </>
         )}
       </p>
-
-      {/* Error Message */}
-      {/* {error && (
-        <div className="mt-2 text-sm text-red-600 bg-red-100 px-4 py-2 rounded">
-          {error}
-        </div>
-      )} */}
     </div>
   );
 }

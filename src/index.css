@@ -1,5 +1,10 @@
+@import url("https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap");
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
+
+* {
+  font-family: "Nunito", sans-serif;
+}
 
 @layer base {
   button {
@@ -39,32 +44,20 @@
   }
 }
 
-@import url("https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap");
-
 :root {
-  --color-grey-50: #f9fafb;
-  --color-main-content: #f9fafb;
-  --color-grey-100: #f3f4f6;
-  --color-grey-200: #e5e7eb;
-  --color-grey-300: #d1d5db;
-  --color-grey-400: #9ca3af;
-  --color-grey-500: #6b7280;
-  --color-grey-600: #4b5563;
-  --color-grey-700: #374151;
-  --color-grey-800: #1f2937;
-  --color-grey-900: #111827;
   --color-red-100: #fee2e2;
   --color-red-700: #b91c1c;
   --color-red-800: #991b1b;
   --color-facebook: #1877f2;
   --color-facebook-hover: #3b8af5;
-  --color-modal-gray: #202020;
 }
 
 body,
 nav,
 header {
-  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+  transition:
+    background-color 0.2s ease-in-out,
+    color 0.2s ease-in-out;
 }
 
 /* button {
@@ -119,4 +112,9 @@ header {
 body.modal-open {
   overflow: hidden;
   padding-right: var(--scrollbar-width);
+}
+
+.StripeElement {
+  width: 100% !important;
+  min-height: 2.5rem; /* ensures tap target */
 }

@@ -1,22 +1,24 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 export default function AccountCreated() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      navigate("/");
+      navigate("/explore");
     }, 3000);
 
     return () => clearTimeout(timer);
   }, [navigate]);
 
   return (
-    <div className="min-h-screen flex justify-center bg-white dark:bg-gray-800 p-4">
-      <div className="h-fit bg-gray-50 mt-40 dark:bg-gray-700 rounded-lg p-8 shadow-md text-center max-w-md">
-        <h1 className="text-2xl font-semibold mb-4 text-gray-900 dark:text-white">
-          Account Created Successfully!
+    <div className="min-h-screen flex justify-center bg-(--bg-main) dark:bg-(--brand-bg-secondary) p-4">
+      <div className="h-fit bg-(--bg-primary) mt-40 dark:bg-(--brand-bg-secondary-hover) rounded-lg p-8 shadow-md text-center max-w-md">
+        <h1 className="text-2xl font-semibold mb-4 text-(--text-primary) dark:text-white">
+          {t("accountCreated.title")}
         </h1>
         {/* <p className="text-green-700 dark:text-green-200">
           You will be redirected to the homepage shortly...

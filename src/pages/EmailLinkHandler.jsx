@@ -1,11 +1,13 @@
-// EmailLinkHandler.jsx
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { signInWithEmailLink, isSignInWithEmailLink } from "firebase/auth";
 import { auth } from "../firebase/firebase";
+import { useTranslation } from "react-i18next";
 
 export default function EmailLinkHandler() {
-  const [message, setMessage] = useState("Completing sign-in...");
+  // holds a translation key, so the text follows the current language
+  const [message, setMessage] = useState("emailLink.completing");
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -14,26 +16,27 @@ export default function EmailLinkHandler() {
     const storedEmail = window.localStorage.getItem("emailForSignIn");
 
     if (isSignInWithEmailLink(auth, url)) {
-      const email = storedEmail || window.prompt("Enter your email to confirm");
+      const email = storedEmail || window.prompt(t("emailLink.prompt"));
 
       signInWithEmailLink(auth, email, url)
         .then(() => {
           window.localStorage.removeItem("emailForSignIn");
-          setMessage("Successfully signed in!");
+          setMessage("emailLink.success");
           setTimeout(() => navigate("/"), 1500);
         })
         .catch((error) => {
-          setMessage("Failed to complete sign-in.");
+          setMessage("emailLink.failed");
           console.error(error);
         });
     } else {
-      setMessage("Invalid sign-in link.");
+      setMessage("emailLink.invalid");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location, navigate]);
 
   return (
     <div className="flex items-center justify-center min-h-screen text-lg">
-      {message}
+      {t(message)}
     </div>
   );
 }

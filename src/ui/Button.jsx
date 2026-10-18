@@ -10,10 +10,10 @@ export default function Button({
   const baseStyles = "px-4 py-2 rounded text-sm font-medium transition";
 
   const variants = {
-    primary: "bg-yellow-500 text-white hover:bg-yellow-600",
+    primary: "bg-(--brand-primary) text-white hover:bg-(--brand-hover)",
     secondary:
-      "border border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-white",
-    ghost: "text-gray-700 hover:text-yellow-500",
+      "border border-(--brand-primary) text-(--brand-primary) hover:bg-(--brand-primary) hover:text-white",
+    ghost: "text-gray-700 hover:text-(--brand-primary)",
   };
 
   return (

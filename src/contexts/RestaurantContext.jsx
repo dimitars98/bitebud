@@ -61,6 +61,7 @@ export function RestaurantProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useRestaurants() {
   return useContext(RestaurantContext);
 }

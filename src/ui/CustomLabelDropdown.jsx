@@ -1,31 +1,26 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { useClickOutside } from "../hooks/useClickOutside";
+import { useTranslation } from "react-i18next";
 
 export default function CustomLabelDropdown({ value, onChange }) {
   const [open, setOpen] = useState(false);
+  // Saved in English; shown via address.labels.<label>
   const labels = ["Home", "Work", "Other"];
+  const { t } = useTranslation();
   const dropdownRef = useRef(null);
 
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  useClickOutside(dropdownRef, () => setOpen(false), { enabled: open });
 
   return (
     <div ref={dropdownRef} className="relative">
-      <label className="block text-sm font-medium mb-1">Address label</label>
+      <label className="block text-sm font-medium mb-1">{t("address.labelTitle")}</label>
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="w-full text-left border border-gray-400 rounded-lg px-4 py-2 focus:ring-2 focus:ring-amber-400 bg-white dark:bg-gray-800"
+        className="w-full text-left border border-gray-400 rounded-lg px-4 py-2 focus:ring-2 focus:ring-(--brand) bg-(--bg-main) dark:bg-(--brand-bg-secondary)"
       >
-        {value}
+        {t(`address.labels.${value}`, { defaultValue: value })}
       </button>
 
       <AnimatePresence>
@@ -35,7 +30,7 @@ export default function CustomLabelDropdown({ value, onChange }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -5 }}
             transition={{ duration: 0.15 }}
-            className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden"
+            className="absolute z-10 mt-1 w-full bg-(--bg-main) dark:bg-(--brand-bg-secondary) border border-(--border-primary) dark:border-(--border-primary) rounded-lg shadow-lg overflow-hidden"
           >
             {labels.map((label) => (
               <li
@@ -44,13 +39,13 @@ export default function CustomLabelDropdown({ value, onChange }) {
                   onChange(label);
                   setOpen(false);
                 }}
-                className={`px-4 py-2 cursor-pointer hover:bg-amber-100 dark:hover:bg-gray-700 ${
+                className={`px-4 py-2 cursor-pointer hover:bg-(--brand-soft) dark:hover:bg-(--brand-bg-secondary-hover) ${
                   label === value
-                    ? "bg-amber-50 dark:bg-gray-700 font-semibold"
+                    ? "bg-amber-50 dark:bg-(--brand-bg-secondary-hover) font-semibold"
                     : ""
                 }`}
               >
-                {label}
+                {t(`address.labels.${label}`)}
               </li>
             ))}
           </motion.ul>

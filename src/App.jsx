@@ -1,7 +1,7 @@
 import { RouterProvider } from "react-router-dom";
-import { router } from "./components/router";
+import { router } from "./routes/router";
 import { Toaster } from "react-hot-toast";
-import CookieConsent from "./ui/CookieConsent";
+import CookieConsent from "./components/layout/CookieConsent";
 
 export default function App() {
   return (

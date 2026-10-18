@@ -1,4 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
+import { useClickOutside } from "../hooks/useClickOutside";
+import { useTranslation } from "react-i18next";
 
 /**
  * @param {Object[]} menuItems - List of menu options
@@ -13,6 +15,7 @@ export default function DropdownActionsMenu({
   onClose,
 }) {
   const dropdownRef = useRef();
+  const { t } = useTranslation();
 
   const toggleDropdown = () => {
     if (isOpen) {
@@ -22,35 +25,27 @@ export default function DropdownActionsMenu({
     }
   };
 
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        onClose?.();
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [onClose]);
+  useClickOutside(dropdownRef, () => onClose?.(), { enabled: isOpen });
 
   return (
     <div className="relative z-50" ref={dropdownRef}>
       <button
         onClick={toggleDropdown}
-        className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full flex"
+        aria-label={t("common.moreActions")}
+        className="p-1 hover:bg-(--bg-secondary-hover) dark:hover:bg-gray-600 rounded-full flex"
       >
         <span className="material-symbols-rounded">more_vert</span>
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-8 z-20 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-md w-36">
+        <div className="absolute right-0 top-8 z-20 bg-(--bg-main) dark:bg-(--brand-bg-secondary) border border-gray-300 dark:border-gray-600 rounded-lg shadow-md w-36">
           {menuItems.map(({ label, onClick, danger = false, icon }, index) => (
             <button
               key={index}
               onClick={() => {
                 onClick?.();
               }}
-              className={`flex items-center gap-2 w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${
+              className={`flex items-center gap-2 w-full text-left px-4 py-2 hover:bg-(--bg-secondary) dark:hover:bg-(--brand-bg-secondary-hover) ${
                 danger ? "text-red-600 dark:text-red-400" : ""
               }`}
             >

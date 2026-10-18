@@ -1,50 +1,45 @@
-import { useQuery } from "@tanstack/react-query";
-import { collection, getDocs } from "firebase/firestore";
+// src/hooks/useRestaurantsQuery.js
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { collection, getDocs, onSnapshot, query } from "firebase/firestore";
 import { db } from "../firebase/firebase";
-import { fetchDistances } from "../utils/orsApi";
+import { useEffect } from "react";
+import { docsWithId } from "../utils/firestore";
 
-export async function fetchRestaurantsWithDistances() {
-  return new Promise((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const userCoords = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          };
+// async function fetchRestaurants() {
+//   const snapshot = await getDocs(collection(db, "restaurants"));
+//   return snapshot.docs.map((doc) => ({
+//     id: doc.id,
+//     ...doc.data(), // includes distance field set server-side
+//   }));
+// }
 
-          const snapshot = await getDocs(collection(db, "restaurants"));
-          const rawRestaurants = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
-
-          const { distances, validRestaurants } = await fetchDistances(
-            userCoords,
-            rawRestaurants
-          );
-
-          const restaurants = validRestaurants.map((rest, i) => ({
-            ...rest,
-            distance: distances[i] / 1000,
-          }));
-
-          restaurants.sort((a, b) => b.distance - a.distance);
-          resolve(restaurants);
-        } catch (err) {
-          reject(err);
-        }
-      },
-      (error) => reject(error)
-    );
-  });
-}
+// export function useRestaurantsQuery() {
+//   return useQuery({
+//     queryKey: ["restaurants"],
+//     queryFn: fetchRestaurants,
+//     staleTime: 1000 * 60 * 5,
+//   });
+// }
 
 export function useRestaurantsQuery() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const q = query(collection(db, "restaurants"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = docsWithId(snapshot);
+      queryClient.setQueryData(["restaurants"], data);
+    });
+
+    return () => unsubscribe();
+  }, [queryClient]);
+
   return useQuery({
     queryKey: ["restaurants"],
-    queryFn: fetchRestaurantsWithDistances,
-    staleTime: 1000 * 60 * 5,
-    retry: 1,
+    queryFn: async () => {
+      const snapshot = await getDocs(collection(db, "restaurants"));
+      return docsWithId(snapshot);
+    },
+    staleTime: Infinity,
   });
 }

@@ -1,8 +1,10 @@
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 export default function OrderConfirmation() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const location = useLocation();
   const orderId = location.state?.orderId;
 
@@ -19,10 +21,10 @@ export default function OrderConfirmation() {
   }, [navigate, orderId]);
 
   return (
-    <div className="max-w-xl mx-auto p-6 text-center">
-      <h1 className="text-4xl font-bold mb-4">Thank You!</h1>
-      <p className="mb-6">Your order has been placed successfully.</p>
-      <p>Redirecting to your order status...</p>
+    <div className="dark:text-(--text-primary) max-w-xl mx-auto p-6 text-center">
+      <h1 className="text-4xl font-bold mb-4">{t("confirmation.thanks")}</h1>
+      <p className="mb-6">{t("confirmation.placed")}</p>
+      <p>{t("confirmation.redirecting")}</p>
     </div>
   );
 }

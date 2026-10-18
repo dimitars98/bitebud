@@ -1,35 +1,66 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 
-const FilterContext = createContext();
+const FilterContext = createContext(null);
 
 export function FilterContextProvider({ children }) {
   const [showNearbyOnly, setShowNearbyOnly] = useState(false);
-  const [filteredRestaurants, setFilteredRestaurants] = useState([]);
-  const [categoryFilterActive, setCategoryFilterActive] = useState(false);
+
   const [filters, setFilters] = useState({
-    maxDistance: 150,
     tags: [],
+    maxDistance: 150,
   });
 
+  const [activeCategory, setActiveCategory] = useState(null);
+
+  /**
+   * 🔥 This replaces:
+   * - filteredRestaurants state
+   * - categoryFilterActive boolean
+   */
+  const hasActiveFilters = useMemo(() => {
+    return (
+      filters.tags.length > 0 ||
+      filters.maxDistance < 150 ||
+      activeCategory !== null
+    );
+  }, [filters, activeCategory]);
+
   function resetFilters() {
-    setFilters({ maxDistance: 150, tags: [] });
-    setCategoryFilterActive(false);
+    setFilters({ tags: [], maxDistance: 150 });
+    setActiveCategory(null);
     setShowNearbyOnly(false);
-    setFilteredRestaurants([]);
+  }
+
+  function showNearby() {
+    setShowNearbyOnly(true);
+    setActiveCategory(false);
+  }
+
+  function showAll() {
+    setShowNearbyOnly(false);
+    setActiveCategory(false);
   }
 
   return (
     <FilterContext.Provider
       value={{
+        // modal filters
         filters,
         setFilters,
+
+        // category
+        activeCategory,
+        setActiveCategory,
+
+        // nearby
         showNearbyOnly,
         setShowNearbyOnly,
-        filteredRestaurants,
-        setFilteredRestaurants,
-        categoryFilterActive,
-        setCategoryFilterActive,
+
+        // helpers
+        hasActiveFilters,
         resetFilters,
+        showNearby,
+        showAll,
       }}
     >
       {children}
@@ -41,7 +72,7 @@ export function useFilterContext() {
   const context = useContext(FilterContext);
   if (!context) {
     throw new Error(
-      "useFilterContext must be used within FilterContextProvider"
+      "useFilterContext must be used within FilterContextProvider",
     );
   }
   return context;

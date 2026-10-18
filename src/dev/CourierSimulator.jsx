@@ -1,71 +1,82 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { db } from "../firebase/firebase";
 
-export default function CourierSimulator() {
+export default function CourierSimulator({ orderId }) {
   const [isRunning, setIsRunning] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const simulateCourier = async () => {
-      const orderId = localStorage.getItem("ongoingOrderId");
-      if (!orderId) {
-        console.warn("No ongoing order found");
-        return;
-      }
-
-      const orderRef = doc(db, "orders", orderId);
-      const orderSnap = await getDoc(orderRef);
-
-      if (!orderSnap.exists()) {
-        console.error("Order not found");
-        return;
-      }
-
-      const order = orderSnap.data();
-      const { restaurantLocation, deliveryLocation } = order;
-
-      if (!restaurantLocation || !deliveryLocation) {
-        console.error("Missing location data");
-        return;
-      }
-
-      const steps = 20;
-      const delay = 1000;
-
-      const latStep = (deliveryLocation.lat - restaurantLocation.lat) / steps;
-      const lngStep = (deliveryLocation.lng - restaurantLocation.lng) / steps;
-
-      for (let i = 0; i <= steps; i++) {
-        const newLat = restaurantLocation.lat + latStep * i;
-        const newLng = restaurantLocation.lng + lngStep * i;
-
-        await updateDoc(orderRef, {
-          courierLocation: {
-            lat: newLat,
-            lng: newLng,
-          },
-        });
-
-        console.log(`Step ${i + 1}: Updated courier location`);
-        await new Promise((res) => setTimeout(res, delay));
-      }
-
-      console.log("Courier has arrived!");
-    };
-
-    if (isRunning) {
-      simulateCourier();
+  const startSimulation = async () => {
+    if (!orderId) {
+      alert("No order ID provided!");
+      return;
     }
-  }, [isRunning]);
+
+    setIsRunning(true);
+    setLoading(true);
+
+    const orderRef = doc(db, "orders", orderId);
+    const orderSnap = await getDoc(orderRef);
+
+    if (!orderSnap.exists()) {
+      console.error("Order not found");
+      setIsRunning(false);
+      setLoading(false);
+      return;
+    }
+
+    const order = orderSnap.data();
+    const { restaurantLocation, deliveryLocation } = order;
+
+    if (!restaurantLocation || !deliveryLocation) {
+      console.error("Missing location data");
+      setIsRunning(false);
+      setLoading(false);
+      return;
+    }
+
+    const totalSteps = 5; // we will go from step 0 → 5
+    const delay = 2000;
+
+    // movement increments
+    const latStep =
+      (deliveryLocation.lat - restaurantLocation.lat) / totalSteps;
+    const lngStep =
+      (deliveryLocation.lng - restaurantLocation.lng) / totalSteps;
+
+    // Run steps 0 → 5
+    for (let step = 0; step <= totalSteps; step++) {
+      const newLat = restaurantLocation.lat + latStep * step;
+      const newLng = restaurantLocation.lng + lngStep * step;
+
+      // status mapping
+      let status;
+      if (step === 0) status = "awaitingCourier";
+      else if (step > 0 && step < 5) status = "delivering";
+      else if (step === 5) status = "completed";
+
+      await updateDoc(orderRef, {
+        step: step, // STEP NUMBER (used by your step tracker)
+        status: status, // BUSINESS STATUS
+        courierLocation: { lat: newLat, lng: newLng },
+      });
+
+      await new Promise((res) => setTimeout(res, delay));
+    }
+
+    console.log("Courier simulation finished!");
+    setIsRunning(false);
+    setLoading(false);
+  };
 
   return (
-    <div className="p-4 bg-gray-900 text-white rounded-xl">
-      <h2 className="text-xl font-bold mb-2">Courier Simulator</h2>
+    <div className="p-4 bg-gray-900 text-white rounded-xl mb-6 text-center">
       <button
-        className="bg-yellow-400 px-4 py-2 rounded-xl text-black font-semibold"
-        onClick={() => setIsRunning(true)}
+        className="bg-yellow-400 px-6 py-2 rounded-xl text-black font-semibold disabled:opacity-50"
+        onClick={startSimulation}
+        disabled={isRunning}
       >
-        Start Courier
+        {loading ? "Simulating..." : "Start Courier"}
       </button>
     </div>
   );
