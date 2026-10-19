@@ -2,12 +2,13 @@
 import Dropdown from "../../ui/Dropdown";
 import { useCurrency } from "../../contexts/CurrencyContext";
 import { useTranslation } from "react-i18next";
+import { SUPPORTED_CURRENCIES } from "../../constants/currencies";
 
 export default function CurrencySelector() {
   const { currency, setCurrency } = useCurrency();
   const { t } = useTranslation();
 
-  const supportedCurrencies = ["USD", "EUR", "GBP", "AUD", "INR"].map(
+  const supportedCurrencies = SUPPORTED_CURRENCIES.map(
     (code) => ({ value: code, label: t(`currency.${code}`) }),
   );
 

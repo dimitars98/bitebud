@@ -35,7 +35,11 @@
     "accountMenu": "Account menu",
     "openCart": "Open cart",
     "openMenu": "Open menu",
-    "closeMenu": "Close menu"
+    "closeMenu": "Close menu",
+    "preferences": "Preferences",
+    "darkMode": "Dark mode",
+    "currency": "Currency",
+    "viewProfile": "View profile and orders"
   },
   "hero": {
     "board": "DEPARTURES",

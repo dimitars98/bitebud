@@ -35,7 +35,11 @@
     "accountMenu": "Мени на профилот",
     "openCart": "Отвори кошничка",
     "openMenu": "Отвори мени",
-    "closeMenu": "Затвори мени"
+    "closeMenu": "Затвори мени",
+    "preferences": "Поставки",
+    "darkMode": "Темен режим",
+    "currency": "Валута",
+    "viewProfile": "Профил и нарачки"
   },
   "hero": {
     "board": "ПОАЃАЊА",

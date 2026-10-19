@@ -4,20 +4,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import CurrencySelector from "./CurrencySelector";
 import { useCurrency } from "../../contexts/CurrencyContext";
 import { useClickOutside } from "../../hooks/useClickOutside";
+import { CURRENCY_SYMBOLS } from "../../constants/currencies";
 
 export default function MobileCurrencySelector() {
   const [open, setOpen] = useState(false);
   const { currency } = useCurrency();
   const ref = useRef(null);
-
-  // Map currency codes to symbols
-  const symbols = {
-    USD: "$",
-    EUR: "€",
-    GBP: "£",
-    AUD: "A$",
-    INR: "₹",
-  };
 
   useClickOutside(ref, () => setOpen(false), { enabled: open });
 
@@ -28,7 +20,7 @@ export default function MobileCurrencySelector() {
         onClick={() => setOpen(!open)}
         className="w-10 h-10 flex items-center justify-center rounded-full bg-(--bg-secondary) dark:bg-(--brand-bg-secondary) shadow-sm"
       >
-        <span className="text-lg font-bold">{symbols[currency] || "$"}</span>
+        <span className="text-lg font-bold">{CURRENCY_SYMBOLS[currency] || "$"}</span>
       </button>
 
       {/* Animated dropdown */}

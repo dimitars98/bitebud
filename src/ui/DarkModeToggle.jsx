@@ -1,20 +1,12 @@
-import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Sun, Moon } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useDarkMode } from "../hooks/useDarkMode";
 
 export default function DarkModeToggle() {
   const { t } = useTranslation();
-  const [darkMode, setDarkMode] = useState(
-    localStorage.getItem("theme") === "dark" ||
-      (!localStorage.getItem("theme") &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches)
-  );
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", darkMode);
-    localStorage.setItem("theme", darkMode ? "dark" : "light");
-  }, [darkMode]);
+  // shared with the dark-mode row in the mobile menu
+  const [darkMode, setDarkMode] = useDarkMode();
 
   return (
     <button
